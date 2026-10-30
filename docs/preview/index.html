@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Skeleton — Body Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+@property --a{syntax:'<angle>';inherits:false;initial-value:0deg}
+:root{--bg:#f4f4f6;--text:#0b0b0c;--muted:#6e6e76;--line:rgba(0,0,0,.08);--pain:#ff4d3d;
+--rainbow:conic-gradient(from var(--a),#ff8a8a,#ffd27a,#9ff0b8,#7fd6ff,#b79cff,#ff9ee5,#ff8a8a)}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;color:var(--text);font-family:Inter,-apple-system,system-ui,sans-serif;overflow:hidden;-webkit-tap-highlight-color:transparent;
+background:radial-gradient(120% 70% at 50% 30%,#ffffff 0%,#f1f1f4 55%,#e7e7ec 100%)}
+#app{position:fixed;inset:0;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+.glass{position:relative;background:rgba(255,255,255,.58);-webkit-backdrop-filter:blur(22px) saturate(180%);backdrop-filter:blur(22px) saturate(180%);box-shadow:0 8px 30px rgba(0,0,0,.06),inset 0 1px 0 rgba(255,255,255,.9)}
+.glass::before{content:'';position:absolute;inset:0;border-radius:inherit;padding:1.3px;background:var(--rainbow);
+-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.75;animation:spin 6s linear infinite}
+.glass.quiet::before{opacity:.35}
+@keyframes spin{to{--a:360deg}}
+header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 4px}
+.brand{font-weight:700;font-size:22px;letter-spacing:-.02em}
+.tag{font-size:11px;font-weight:600;color:var(--text);border-radius:999px;padding:5px 11px}
+#layers{display:flex;gap:7px;padding:10px 14px;overflow-x:auto;scrollbar-width:none}
+#layers::-webkit-scrollbar,#log::-webkit-scrollbar{display:none}
+.chip{flex:none;border:none;color:var(--muted);border-radius:999px;padding:8px 13px;font:inherit;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px}
+.chip .dot{width:8px;height:8px;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+.chip.on{color:var(--text)}
+.chip:not(.on){background:rgba(255,255,255,.3)}
+.chip:not(.on)::before{opacity:0}
+.chip:not(.on) .dot{opacity:.25}
+#stage{position:relative;flex:1;min-height:0}
+#stage canvas{display:block;width:100%;height:100%;touch-action:none}
+#label{position:absolute;left:50%;top:8px;transform:translateX(-50%);border-radius:16px;padding:9px 14px;font-size:12.5px;max-width:86%;text-align:center;opacity:0;transition:opacity .2s;pointer-events:none;line-height:1.35}
+#label.show{opacity:1}
+#label b{display:block;font-size:14px;margin-bottom:2px}
+#label span{color:var(--muted)}
+#xray{position:absolute;right:12px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;font-size:9.5px;font-weight:600;color:var(--muted);letter-spacing:.1em;padding:12px 6px;border-radius:999px}
+#xray input{writing-mode:vertical-lr;direction:rtl;width:22px;height:120px;accent-color:#0b0b0c}
+#hint{position:absolute;left:14px;bottom:10px;font-size:11px;color:var(--muted)}
+#loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px}
+#panel{border-radius:28px 28px 0 0;padding:14px 16px 16px;max-height:47%;overflow-y:auto;background:rgba(255,255,255,.72)}
+.tabs{display:flex;gap:4px;margin-bottom:14px;background:rgba(0,0,0,.05);padding:4px;border-radius:14px}
+.tab{flex:1;padding:9px 6px;border-radius:11px;border:none;background:transparent;color:var(--muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.tab.on{background:#fff;color:var(--text);box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.tl{display:flex;align-items:center;gap:12px}
+#play{width:42px;height:42px;border-radius:50%;border:none;background:#0b0b0c;color:#fff;font-size:14px;font-weight:700;cursor:pointer;flex:none;box-shadow:0 6px 16px rgba(0,0,0,.18)}
+#day{flex:1;accent-color:#0b0b0c}
+#dayLbl{font-size:13px;font-weight:600;width:50px;text-align:right;font-variant-numeric:tabular-nums}
+#log{display:flex;gap:7px;margin:12px 0 14px;overflow-x:auto;scrollbar-width:none;padding:2px}
+.entry{flex:none;font:inherit;font-size:12px;font-weight:500;border-radius:12px;padding:7px 10px;background:rgba(255,255,255,.5);border:1px solid var(--line);color:#a3a3aa;transition:all .3s;cursor:pointer;text-align:left}
+.entry.on{color:var(--text);background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.entry i{font-style:normal;color:var(--pain);font-weight:700;margin-right:4px}
+.card{border-radius:22px;padding:14px 15px;background:rgba(255,255,255,.7)}
+.card h3{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.card h4{font-size:17px;letter-spacing:-.01em;margin-bottom:6px}
+.card p{font-size:13.5px;line-height:1.5;color:#2a2a2e}
+.card .k{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 4px}
+.card ul{margin-left:16px;font-size:13px;color:#2a2a2e;line-height:1.55}
+.data{font-size:12.5px;color:#2a2a2e;background:rgba(0,0,0,.035);border-radius:14px;padding:9px 11px;margin-top:12px;line-height:1.45}
+.data b{font-weight:700}
+.flag{margin-top:12px;font-size:12.5px;color:#a3241a;background:rgba(255,77,61,.08);border:1px solid rgba(255,77,61,.25);border-radius:14px;padding:9px 11px;line-height:1.45}
+.locked{color:var(--muted);font-size:13px;line-height:1.5}
+.note{font-size:11px;color:var(--muted);margin-top:12px;line-height:1.45}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">Skeleton</div>
+    <div class="tag glass">Concept preview</div>
+  </header>
+  <div id="layers"></div>
+  <div id="stage">
+    <div id="loading">Loading body…</div>
+    <div id="label" class="glass"></div>
+    <div id="xray" class="glass quiet"><span>SKIN</span><input id="skinOp" type="range" min="0" max="1" step="0.01" value="0.3" aria-label="Skin opacity"><span>X-RAY</span></div>
+    <div id="hint">Drag to rotate · pinch to zoom · tap anything</div>
+  </div>
+  <div id="panel" class="glass">
+    <div class="tabs">
+      <button class="tab on" data-s="back">Lower back → Groin</button>
+      <button class="tab" data-s="jaw">Jaw → Neck</button>
+    </div>
+    <div class="tl">
+      <button id="play" aria-label="Play">▶</button>
+      <input id="day" type="range" min="1" max="10" step="0.01" value="1" aria-label="Day">
+      <div id="dayLbl">Day 1</div>
+    </div>
+    <div id="log"></div>
+    <div class="card glass" id="insight"></div>
+    <div class="note">Stylized stand-in body with example data. In the real app this is your own scanned body, with medically accurate anatomy fitted inside it. Not medical advice.</div>
+  </div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+stage.prepend(renderer.domElement);
+document.getElementById('loading').remove();
+
+const scene = new THREE.Scene();
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(34, 1, 0.05, 50);
+camera.position.set(1.4, 1.15, -1.6);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0.95, 0);
+controls.enableDamping = true;
+controls.enablePan = false;
+controls.minDistance = 0.5;
+controls.maxDistance = 4.5;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0xd8d8de, 0.6));
+const key = new THREE.DirectionalLight(0xffffff, 1.5); key.position.set(2, 3, 2); scene.add(key);
+const fill = new THREE.DirectionalLight(0xffffff, 0.6); fill.position.set(-2, 1.5, 2); scene.add(fill);
+const rim = new THREE.DirectionalLight(0xb9d6ff, 0.9); rim.position.set(-1, 2, -3); scene.add(rim);
+
+const ring = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.355, 72),
+  new THREE.MeshBasicMaterial({ color: 0x0b0b0c, transparent: true, opacity: 0.12, side: THREE.DoubleSide }));
+ring.rotation.x = -Math.PI / 2; scene.add(ring);
+
+// ---------- Layers ----------
+const LAYERS = [
+  { id: 'skin',    name: 'Skin',     color: 'linear-gradient(135deg,#ff9ee5,#7fd6ff,#9ff0b8)', cat: 'Skin surface' },
+  { id: 'muscles', name: 'Muscles',  color: '#c2453f', cat: 'Muscle' },
+  { id: 'tendons', name: 'Tendons',  color: '#f2efe6', cat: 'Tendon / ligament' },
+  { id: 'nerves',  name: 'Nerves',   color: '#f5c542', cat: 'Nerve' },
+  { id: 'bones',   name: 'Bones',    color: '#e9e1cc', cat: 'Bone / joint' },
+];
+const groups = {};
+LAYERS.forEach(l => { groups[l.id] = new THREE.Group(); groups[l.id].userData.cat = l.cat; scene.add(groups[l.id]); });
+
+const MAT = {
+  skin: new THREE.MeshPhysicalMaterial({ color: 0xf6f6f8, roughness: 0.12, metalness: 0, clearcoat: 1, clearcoatRoughness: 0.08, iridescence: 1, iridescenceIOR: 1.35, iridescenceThicknessRange: [180, 900], transparent: true, opacity: 0.3, depthWrite: false }),
+  muscles: new THREE.MeshPhysicalMaterial({ color: 0xc9564c, roughness: 0.42, clearcoat: 0.4, clearcoatRoughness: 0.4, sheen: 0.6, sheenColor: 0xffb3a8 }),
+  tendons: new THREE.MeshStandardMaterial({ color: 0xf2efe6, roughness: 0.35, metalness: 0.1 }),
+  nerves: new THREE.MeshPhysicalMaterial({ color: 0xf2b630, roughness: 0.3, clearcoat: 0.6, emissive: 0x3a2800 }),
+  bones: new THREE.MeshPhysicalMaterial({ color: 0xf2ece0, roughness: 0.55, clearcoat: 0.3 }),
+};
+const byId = {};
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const UP = V(0, 1, 0);
+
+function add(mesh, layer, label, id, info) {
+  mesh.userData = { label, id, info: info || '', layer };
+  if (id) byId[id] = mesh;
+  groups[layer].add(mesh);
+  return mesh;
+}
+function mat(layer) { return layer === 'skin' ? MAT.skin : MAT[layer].clone(); }
+function seg(layer, a, b, r, label, id, info, scale) {
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, Math.max(a.distanceTo(b), 0.001), 8, 18), mat(layer));
+  m.position.copy(a).add(b).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(UP, b.clone().sub(a).normalize());
+  if (scale) m.scale.set(...scale);
+  return add(m, layer, label, id, info);
+}
+function ball(layer, p, r, label, id, info, scale) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 22), mat(layer));
+  m.position.copy(p);
+  if (scale) m.scale.set(...scale);
+  return add(m, layer, label, id, info);
+}
+function tube(layer, pts, r, label, id, info) {
+  const m = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 80, r, 8, false), mat(layer));
+  return add(m, layer, label, id, info);
+}
+
+// ---------- Skin ----------
+ball('skin', V(0, 1.625, 0.005), 0.105, 'Head', null, '', [0.88, 1.1, 1]);
+seg('skin', V(0, 1.43, -0.01), V(0, 1.53, -0.01), 0.056, 'Neck');
+seg('skin', V(0, 1.1, 0), V(0, 1.3, 0), 0.16, 'Chest & upper back', null, '', [1.05, 1, 0.62]);
+seg('skin', V(-0.19, 1.36, -0.005), V(0.19, 1.36, -0.005), 0.062, 'Shoulders');
+seg('skin', V(0, 0.88, 0), V(0, 1.03, 0), 0.142, 'Lower back, hips & pelvis', null, '', [1.05, 1, 0.68]);
+
+// ---------- Both sides ----------
+[1, -1].forEach(s => {
+  const sd = s === 1 ? 'l' : 'r';
+  const side = s === 1 ? 'Left' : 'Right';
+  // skin
+  seg('skin', V(s*.225, 1.35, 0), V(s*.27, 1.1, 0), 0.05, side + ' upper arm');
+  seg('skin', V(s*.27, 1.1, 0), V(s*.3, 0.86, 0.02), 0.042, side + ' forearm');
+  ball('skin', V(s*.305, 0.79, 0.025), 0.042, side + ' hand', null, '', [0.6, 1.2, 0.9]);
+  seg('skin', V(s*.095, 0.86, 0), V(s*.11, 0.5, 0), 0.078, side + ' thigh');
+  seg('skin', V(s*.11, 0.5, 0), V(s*.11, 0.1, -0.01), 0.054, side + ' lower leg');
+  seg('skin', V(s*.11, 0.04, -0.03), V(s*.11, 0.035, 0.12), 0.036, side + ' foot');
+
+  // muscles
+  ball('muscles', V(s*.085, 1.27, 0.07), 0.07, side + ' pectoralis major', 'pec_'+sd, 'Chest muscle', [1.2, 0.8, 0.42]);
+  ball('muscles', V(s*.215, 1.34, 0), 0.058, side + ' deltoid', 'delt_'+sd, 'Shoulder muscle', [1, 1.25, 1]);
+  seg('muscles', V(s*.235, 1.29, 0.02), V(s*.262, 1.14, 0.02), 0.032, side + ' biceps', 'bicep_'+sd);
+  seg('muscles', V(s*.272, 1.07, 0.01), V(s*.295, 0.9, 0.02), 0.028, side + ' forearm muscles', 'forearm_'+sd);
+  ball('muscles', V(s*.085, 1.4, -0.06), 0.085, side + ' trapezius', 'trap_'+sd, 'Runs from your skull and neck across the shoulder and upper back', [1.25, 0.75, 0.45]);
+  ball('muscles', V(s*.11, 1.17, -0.07), 0.08, side + ' latissimus dorsi', 'lat_'+sd, 'Large back muscle', [0.8, 1.4, 0.42]);
+  seg('muscles', V(s*.035, 0.93, -0.095), V(s*.035, 1.26, -0.1), 0.026, side + ' erector spinae', 'erector_'+sd, 'Muscles running alongside your spine');
+  ball('muscles', V(s*.068, 1.0, -0.07), 0.04, side + ' quadratus lumborum', 'ql_'+sd, 'Deep lower-back muscle, a common source of low back pain', [0.8, 1.35, 0.6]);
+  ball('muscles', V(s*.075, 0.86, -0.08), 0.08, side + ' gluteus maximus', 'glute_'+sd, 'Main buttock muscle', [1, 1, 0.7]);
+  seg('muscles', V(s*.035, 1.03, -0.03), V(s*.08, 0.8, 0.065), 0.022, side + ' psoas (hip flexor)', 'psoas_'+sd, 'Runs from your lower spine through the pelvis to the inner hip. It links lower-back and groin pain.');
+  seg('muscles', V(s*.1, 0.81, 0.035), V(s*.112, 0.56, 0.04), 0.056, side + ' quadriceps', 'quad_'+sd, 'Front of thigh');
+  seg('muscles', V(s*.1, 0.81, -0.035), V(s*.112, 0.56, -0.035), 0.05, side + ' hamstrings', 'ham_'+sd, 'Back of thigh');
+  seg('muscles', V(s*.05, 0.83, 0.02), V(s*.09, 0.6, 0.01), 0.033, side + ' adductors', 'add_'+sd, 'Inner thigh / groin muscles');
+  ball('muscles', V(s*.11, 0.36, -0.035), 0.045, side + ' calf (gastrocnemius)', 'calf_'+sd, '', [1, 1.9, 1]);
+  seg('muscles', V(s*.118, 0.45, 0.03), V(s*.112, 0.16, 0.02), 0.019, side + ' tibialis anterior', 'tib_'+sd, 'Shin muscle');
+  ball('muscles', V(s*.07, 1.555, 0.035), 0.026, side + ' masseter (jaw muscle)', 'masseter_'+sd, 'Your main chewing and clenching muscle', [0.6, 1.4, 1]);
+  ball('muscles', V(s*.086, 1.665, 0.0), 0.036, side + ' temporalis (temple)', 'temporalis_'+sd, 'Fan-shaped jaw muscle on your temple', [0.38, 1, 1.25]);
+  seg('muscles', V(s*.066, 1.585, -0.02), V(s*.025, 1.41, 0.05), 0.014, side + ' sternocleidomastoid', 'scm_'+sd, 'Neck muscle running from behind your ear to your collarbone');
+  seg('muscles', V(s*.028, 1.43, -0.045), V(s*.03, 1.57, -0.055), 0.018, side + ' neck extensors', 'neckext_'+sd, 'Hold your head up; strained by forward-head posture');
+
+  // bones
+  ball('bones', V(s*.068, 1.575, -0.005), 0.013, side + ' jaw joint (TMJ)', 'tmj_'+sd, 'Where your jaw hinges, just in front of the ear');
+  seg('bones', V(s*.02, 1.39, 0.07), V(s*.19, 1.4, 0), 0.01, side + ' clavicle (collarbone)', 'clav_'+sd);
+  ball('bones', V(s*.11, 1.3, -0.09), 0.06, side + ' scapula (shoulder blade)', 'scap_'+sd, '', [0.85, 1, 0.15]);
+  seg('bones', V(s*.225, 1.34, 0), V(s*.27, 1.11, 0), 0.014, side + ' humerus', 'hum_'+sd);
+  seg('bones', V(s*.27, 1.09, 0), V(s*.3, 0.87, 0.02), 0.011, side + ' radius & ulna', 'rad_'+sd);
+  ball('bones', V(s*.085, 0.895, 0), 0.026, side + ' hip joint', 'hip_'+sd, 'Hip problems often show up as groin or knee pain');
+  seg('bones', V(s*.09, 0.88, 0), V(s*.11, 0.52, 0), 0.018, side + ' femur', 'femur_'+sd);
+  ball('bones', V(s*.11, 0.5, 0.05), 0.02, side + ' patella (kneecap)', 'patella_'+sd, '', [1, 1.2, 0.5]);
+  seg('bones', V(s*.11, 0.48, 0), V(s*.11, 0.09, -0.01), 0.016, side + ' tibia', 'tibia_'+sd);
+  seg('bones', V(s*.11, 0.04, -0.03), V(s*.11, 0.03, 0.11), 0.014, side + ' foot bones', 'footb_'+sd);
+  ball('bones', V(s*.042, 0.965, -0.075), 0.016, side + ' sacroiliac (SI) joint', 'si_'+sd, 'Joins your spine to your pelvis; can refer pain to the buttock and groin');
+
+  // tendons & ligaments
+  seg('tendons', V(s*.11, 0.27, -0.05), V(s*.11, 0.06, -0.05), 0.008, side + ' Achilles tendon', 'achilles_'+sd);
+  seg('tendons', V(s*.11, 0.48, 0.05), V(s*.11, 0.43, 0.04), 0.007, side + ' patellar tendon', 'pattend_'+sd);
+  tube('tendons', [V(s*.13, 0.93, -0.01), V(s*.158, 0.72, 0), V(s*.135, 0.5, 0)], 0.006, side + ' IT band', 'itb_'+sd, 'Connective band down the outside of the thigh');
+  tube('tendons', [V(s*.1, 0.965, 0.07), V(s*.055, 0.875, 0.1), V(s*.012, 0.845, 0.1)], 0.005, side + ' inguinal ligament', 'inguinal_'+sd, 'Runs along the crease of your groin');
+  seg('tendons', V(s*.11, 0.018, -0.02), V(s*.11, 0.018, 0.1), 0.006, side + ' plantar fascia', 'plantar_'+sd);
+  tube('tendons', [V(s*.072, 1.6, -0.012), V(s*.072, 1.582, 0.0), V(s*.07, 1.56, 0.012)], 0.004, side + ' TMJ ligament', 'tmjlig_'+sd);
+
+  // nerves
+  tube('nerves', [V(s*.03, 0.95, -0.08), V(s*.08, 0.86, -0.1), V(s*.1, 0.7, -0.06), V(s*.11, 0.52, -0.04), V(s*.11, 0.2, -0.03), V(s*.11, 0.05, 0.0)], 0.005, side + ' sciatic nerve', 'sciatic_'+sd, 'Runs from your lower back down the back of the leg');
+  tube('nerves', [V(s*.03, 1.0, -0.07), V(s*.06, 0.95, -0.02), V(s*.08, 0.88, 0.06), V(s*.068, 0.84, 0.095)], 0.0045, side + ' ilioinguinal & genitofemoral nerves', 'groinnerve_'+sd, 'Leave the lower spine and supply the groin, a classic back-to-groin path');
+  tube('nerves', [V(s*.035, 0.98, -0.06), V(s*.075, 0.9, 0.03), V(s*.1, 0.75, 0.07), V(s*.11, 0.56, 0.06)], 0.0045, side + ' femoral nerve', 'femoral_'+sd, 'Supplies the front of the thigh');
+  tube('nerves', [V(s*.03, 1.47, -0.05), V(s*.12, 1.39, -0.01), V(s*.23, 1.3, 0.01), V(s*.27, 1.1, 0.02), V(s*.3, 0.85, 0.03)], 0.0045, side + ' brachial plexus', 'brachial_'+sd, 'Nerves from the neck down the arm');
+  tube('nerves', [V(s*.062, 1.605, -0.012), V(s*.072, 1.56, 0.03), V(s*.04, 1.52, 0.072)], 0.0035, side + ' trigeminal nerve (jaw branch)', 'trigeminal_'+sd, 'Supplies the jaw and chewing muscles');
+  tube('nerves', [V(s*.02, 1.52, -0.06), V(s*.04, 1.6, -0.085), V(s*.045, 1.7, -0.06)], 0.0035, side + ' occipital nerve', 'occipital_'+sd, 'Neck-to-head nerve behind tension headaches');
+});
+
+// center bones
+ball('bones', V(0, 1.635, -0.005), 0.086, 'Skull', 'skull', '', [0.86, 1.05, 1.05]);
+tube('bones', [V(-0.066, 1.572, -0.005), V(-0.06, 1.525, 0.04), V(0, 1.503, 0.085), V(0.06, 1.525, 0.04), V(0.066, 1.572, -0.005)], 0.012, 'Mandible (jaw bone)', 'mandible');
+for (let i = 0; i < 24; i++) {
+  const y = 0.95 + i * 0.026;
+  const z = -0.075 + 0.012 * Math.sin((i / 23) * Math.PI * 1.6);
+  const name = y < 1.08 ? 'Lumbar vertebra (lower back)' : y < 1.42 ? 'Thoracic vertebra (mid back)' : 'Cervical vertebra (neck)';
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.018, 0.03), mat('bones'));
+  m.position.set(0, y, z);
+  add(m, 'bones', name, 'vert' + i);
+}
+for (let i = 0; i < 8; i++) {
+  const m = new THREE.Mesh(new THREE.TorusGeometry(0.125 - Math.abs(i - 3) * 0.006, 0.006, 6, 40), mat('bones'));
+  m.rotation.x = Math.PI / 2 + 0.25; m.scale.set(1, 0.66, 1);
+  m.position.set(0, 1.13 + i * 0.03, 0.005);
+  add(m, 'bones', 'Ribs', 'rib' + i);
+}
+seg('bones', V(0, 1.17, 0.098), V(0, 1.36, 0.098), 0.012, 'Sternum (breastbone)', 'sternum');
+{
+  const m = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.022, 10, 44), mat('bones'));
+  m.rotation.x = Math.PI / 2 - 0.35; m.scale.set(1.15, 0.75, 1);
+  m.position.set(0, 0.93, 0);
+  add(m, 'bones', 'Pelvis', 'pelvis');
+}
+ball('bones', V(0, 0.93, -0.078), 0.035, 'Sacrum', 'sacrum', 'Base of the spine, wedged into the pelvis', [1, 1.3, 0.5]);
+tube('nerves', [V(0, 0.95, -0.075), V(0, 1.2, -0.085), V(0, 1.45, -0.07), V(0, 1.58, -0.05)], 0.006, 'Spinal cord', 'cord', 'Every pain signal travels through here');
+
+// ---------- Scenarios ----------
+const SCEN = {
+  back: {
+    target: V(0, 0.92, 0), cam: V(1.25, 1.05, -1.45),
+    entries: [
+      { day: 1, where: 'Left lower back', type: 'Sharp', int: 6, p: V(0.05, 1.0, -0.125), note: 'Started the day after deadlifts' },
+      { day: 3, where: 'Left SI joint / buttock', type: 'Aching', int: 5, p: V(0.05, 0.935, -0.122), note: 'Worse after sitting' },
+      { day: 5, where: 'Left groin', type: 'Dull', int: 4, p: V(0.075, 0.85, 0.112), note: 'Comes and goes' },
+      { day: 8, where: 'Front of left thigh', type: 'Tingling', int: 3, p: V(0.1, 0.71, 0.088), note: 'Pins and needles' },
+    ],
+    arcs: [[0, 1], [1, 2], [2, 3]],
+    highlight: [
+      ['ql_l', 'erector_l', 'vert0', 'vert1', 'vert2', 'vert3', 'vert4'],
+      ['si_l', 'sacrum', 'glute_l'],
+      ['psoas_l', 'groinnerve_l', 'inguinal_l', 'hip_l'],
+      ['femoral_l', 'quad_l'],
+    ],
+    insight: {
+      title: 'Lower back → SI joint → groin → thigh',
+      body: 'This path follows the nerves that leave your lower spine and run to the groin and front of the thigh, and the psoas, a hip-flexor muscle that connects your lumbar spine to your inner hip. Pain that starts in the lower back and moves to the groin is a well-known referred-pain pattern.',
+      causes: ['Lumbar disc or spinal joint irritation', 'SI joint strain', 'Tight or overloaded psoas / hip flexors', 'Heavy lifting, especially hinge movements', 'Long periods of sitting'],
+      data: 'Example: pain began 1 day after a heavy lifting session, following 2 nights with low recovery scores.',
+      ask: 'Lumbar spine, SI joint and hip. A physical therapist or sports-medicine doctor is a good fit.',
+      flag: 'Get checked right away if you notice numbness in the groin or inner thighs, new bladder or bowel problems, fever, or leg weakness.',
+    },
+  },
+  jaw: {
+    target: V(0.02, 1.5, 0), cam: V(1.0, 1.62, 0.95),
+    entries: [
+      { day: 1, where: 'Left jaw', type: 'Aching', int: 5, p: V(0.078, 1.548, 0.058), note: 'Sore when chewing' },
+      { day: 2, where: 'Left temple', type: 'Throbbing', int: 4, p: V(0.096, 1.665, 0.02), note: 'Afternoon headache' },
+      { day: 3, where: 'Left side of neck', type: 'Stiff', int: 5, p: V(0.066, 1.48, 0.01), note: 'Hard to turn head' },
+      { day: 6, where: 'Left upper shoulder', type: 'Aching', int: 4, p: V(0.14, 1.415, -0.05), note: 'Tight knot' },
+    ],
+    arcs: [[0, 1], [0, 2], [2, 3]],
+    highlight: [
+      ['masseter_l', 'tmj_l', 'tmjlig_l', 'mandible', 'trigeminal_l'],
+      ['temporalis_l'],
+      ['scm_l', 'neckext_l', 'occipital_l', 'vert20', 'vert21', 'vert22'],
+      ['trap_l'],
+    ],
+    insight: {
+      title: 'Jaw → temple → neck → shoulder',
+      body: 'Your jaw muscle (masseter), temple muscle (temporalis) and the neck muscles that attach just behind your ear work as one chain. Clenching or a forward-head posture loads all of them, so pain often travels from the jaw into the temple, neck and upper shoulder.',
+      causes: ['Clenching or grinding, often at night or under heavy lifts', 'Jaw joint (TMJ) irritation', 'Forward-head posture / long screen time', 'Stress and short sleep'],
+      data: 'Example: pain logged after 3 nights under 6 hours of sleep and a higher-than-usual resting heart rate.',
+      ask: 'Jaw joint and neck. A dentist (for clenching / TMJ) or a physical therapist is a good fit.',
+      flag: 'Get emergency help if jaw or neck pain comes with chest pressure, shortness of breath, sweating or arm pain. That can be the heart.',
+    },
+  },
+};
+
+// ---------- Pain spots & arcs ----------
+const fx = new THREE.Group(); scene.add(fx);
+const sharedCore = new THREE.SphereGeometry(0.016, 20, 14);
+const sharedHalo = new THREE.SphereGeometry(0.045, 24, 16);
+let spots = [], arcs = [], current = 'back';
+
+function painColor(i) { return new THREE.Color().setHSL(0.11 - (i / 10) * 0.11, 1, 0.55); }
+
+function buildScenario(key) {
+  fx.clear(); spots = []; arcs = [];
+  const sc = SCEN[key];
+  sc.entries.forEach((e, idx) => {
+    const c = painColor(e.int);
+    const core = new THREE.Mesh(sharedCore, new THREE.MeshBasicMaterial({ color: c, transparent: true, depthTest: false }));
+    const halo = new THREE.Mesh(sharedHalo, new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.3, depthTest: false, depthWrite: false }));
+    core.position.copy(e.p); halo.position.copy(e.p);
+    core.renderOrder = 20; halo.renderOrder = 19;
+    core.userData = { spot: idx };
+    fx.add(halo, core);
+    spots.push({ e, core, halo });
+  });
+  sc.arcs.forEach(([a, b], i) => {
+    const pa = sc.entries[a].p, pb = sc.entries[b].p;
+    const mid = pa.clone().add(pb).multiplyScalar(0.5);
+    const out = V(mid.x, 0, mid.z); if (out.length() < 1e-3) out.set(1, 0, 0);
+    out.normalize().multiplyScalar(0.07 + pa.distanceTo(pb) * 0.25);
+    const curve = new THREE.QuadraticBezierCurve3(pa, mid.clone().add(out), pb);
+    const line = new THREE.Mesh(new THREE.TubeGeometry(curve, 48, 0.0028, 6, false),
+      new THREE.MeshBasicMaterial({ color: 0xff4d3d, transparent: true, opacity: 0, depthTest: false, depthWrite: false }));
+    line.renderOrder = 18; fx.add(line);
+    const dots = [0, 1, 2].map(() => {
+      const d = new THREE.Mesh(new THREE.SphereGeometry(0.007, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, depthTest: false }));
+      d.renderOrder = 21; fx.add(d); return d;
+    });
+    arcs.push({ curve, line, dots, from: sc.entries[b].day, hl: sc.highlight[b] });
+  });
+  // log chips
+  const log = document.getElementById('log'); log.innerHTML = '';
+  sc.entries.forEach((e, i) => {
+    const b = document.createElement('button'); b.className = 'entry';
+    b.innerHTML = `<i>D${e.day}</i>${e.type} · ${e.where}`;
+    b.onclick = () => { setDay(e.day + 0.6); showSpot(i); };
+    log.appendChild(b);
+  });
+  focus(sc.target, sc.cam);
+}
+
+// ---------- Highlights ----------
+const HL_COLOR = new THREE.Color(0xff6a3d);
+let hlIds = new Set(), tapped = null, tappedUntil = 0;
+function applyHighlights(t) {
+  const pulse = 0.55 + 0.45 * Math.sin(t * 4);
+  Object.values(byId).forEach(m => {
+    if (m.userData.layer === 'skin') return;
+    const base = m.userData.layer === 'nerves' ? 0x3a2800 : 0x000000;
+    if (m === tapped && t < tappedUntil) m.material.emissive.setHex(0x1d8c74);
+    else if (hlIds.has(m.userData.id)) m.material.emissive.copy(HL_COLOR).multiplyScalar(0.35 + 0.45 * pulse);
+    else m.material.emissive.setHex(base);
+  });
+}
+
+// ---------- Timeline ----------
+let day = 1, playing = false;
+const dayEl = document.getElementById('day'), dayLbl = document.getElementById('dayLbl'), playBtn = document.getElementById('play');
+function setDay(d) { day = Math.min(10, Math.max(1, d)); dayEl.value = day; }
+dayEl.oninput = () => { day = +dayEl.value; playing = false; playBtn.textContent = '▶'; };
+playBtn.onclick = () => {
+  if (!playing && day >= 9.99) setDay(1);
+  playing = !playing; playBtn.textContent = playing ? '❚❚' : '▶';
+};
+
+function renderInsight() {
+  const sc = SCEN[current], el = document.getElementById('insight');
+  const seen = sc.entries.filter(e => day >= e.day).length;
+  if (seen < 2) {
+    el.innerHTML = `<h3>Insight</h3><p class="locked">One pain logged so far. Skeleton connects the dots once pain shows up somewhere else. Press ▶ or drag the timeline to watch it move.</p>`;
+    return;
+  }
+  const i = sc.insight;
+  el.innerHTML = `<h3>Pattern found · ${seen} linked entries</h3><h4>${i.title}</h4><p>${i.body}</p>
+    <div class="k">Often linked to</div><ul>${i.causes.map(c => `<li>${c}</li>`).join('')}</ul>
+    <div class="data"><b>From your health apps</b> · ${i.data}</div>
+    <div class="k">Worth asking a professional about</div><p>${i.ask}</p>
+    <div class="flag">⚠ ${i.flag}</div>`;
+}
+let lastInsightKey = '';
+
+// ---------- Layer chips & x-ray ----------
+const layersEl = document.getElementById('layers');
+LAYERS.forEach(l => {
+  const b = document.createElement('button'); b.className = 'chip glass on';
+  b.innerHTML = `<span class="dot" style="background:${l.color}"></span>${l.name}`;
+  b.onclick = () => { groups[l.id].visible = !groups[l.id].visible; b.classList.toggle('on', groups[l.id].visible); };
+  layersEl.appendChild(b);
+});
+const skinOp = document.getElementById('skinOp');
+function setSkin(v) {
+  MAT.skin.opacity = v;
+  const solid = v > 0.92;
+  MAT.skin.transparent = !solid; MAT.skin.depthWrite = solid; MAT.skin.needsUpdate = true;
+}
+skinOp.oninput = () => setSkin(+skinOp.value); setSkin(0.3);
+
+// ---------- Tabs ----------
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+  current = t.dataset.s; buildScenario(current); setDay(1); playing = false; playBtn.textContent = '▶'; lastInsightKey = '';
+});
+
+// ---------- Camera focus ----------
+let focusAnim = null;
+function focus(target, pos) {
+  focusAnim = { t0: performance.now(), ft: controls.target.clone(), fp: camera.position.clone(), tt: target.clone(), tp: pos.clone() };
+}
+
+// ---------- Tap to inspect ----------
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), labelEl = document.getElementById('label');
+let down = null, labelTimer = null;
+function showLabel(html) {
+  labelEl.innerHTML = html; labelEl.classList.add('show');
+  clearTimeout(labelTimer); labelTimer = setTimeout(() => labelEl.classList.remove('show'), 4200);
+}
+function showSpot(i) {
+  const e = SCEN[current].entries[i];
+  showLabel(`<b>${e.where}</b><span>Day ${e.day} · ${e.type} · ${e.int}/10 · ${e.note}</span>`);
+}
+renderer.domElement.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY }; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 6) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(ndc, camera);
+  const activeSpots = spots.filter(s => s.core.visible).map(s => s.core);
+  const hs = ray.intersectObjects(activeSpots, false);
+  if (hs.length) { showSpot(hs[0].object.userData.spot); return; }
+  const targets = [];
+  LAYERS.forEach(l => {
+    if (!groups[l.id].visible) return;
+    if (l.id === 'skin' && MAT.skin.opacity < 0.5) return;
+    targets.push(...groups[l.id].children);
+  });
+  const hits = ray.intersectObjects(targets, false);
+  if (!hits.length) { labelEl.classList.remove('show'); return; }
+  const m = hits[0].object, cat = groups[m.userData.layer].userData.cat;
+  tapped = m.userData.layer === 'skin' ? null : m; tappedUntil = clock.elapsedTime + 1.6;
+  showLabel(`<b>${m.userData.label}</b><span>${cat}${m.userData.info ? ' · ' + m.userData.info : ''}</span>`);
+});
+
+// ---------- Resize ----------
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / Math.max(h, 1); camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(stage); resize();
+
+// ---------- Loop ----------
+const clock = new THREE.Clock();
+buildScenario(current);
+function tick() {
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+  if (playing) { setDay(day + dt * 0.9); if (day >= 10) { playing = false; playBtn.textContent = '▶'; } }
+  dayLbl.textContent = 'Day ' + Math.floor(day);
+
+  if (focusAnim) {
+    const k = Math.min(1, (performance.now() - focusAnim.t0) / 1100), e = 1 - Math.pow(1 - k, 3);
+    controls.target.lerpVectors(focusAnim.ft, focusAnim.tt, e);
+    camera.position.lerpVectors(focusAnim.fp, focusAnim.tp, e);
+    if (k >= 1) focusAnim = null;
+  }
+
+  const sc = SCEN[current];
+  hlIds = new Set();
+  spots.forEach((s, i) => {
+    const age = day - s.e.day, on = age >= 0;
+    s.core.visible = s.halo.visible = on;
+    if (!on) return;
+    const grow = Math.min(1, age / 0.4);
+    const fade = 1 - Math.min(0.45, Math.max(0, age - 2) * 0.08);
+    const p = 1 + 0.25 * Math.sin(t * 5 + i);
+    s.core.scale.setScalar(grow * (0.8 + s.e.int / 20));
+    s.halo.scale.setScalar(grow * p * (0.7 + s.e.int / 14));
+    s.core.material.opacity = fade; s.halo.material.opacity = 0.22 * fade;
+    if (age < 3) sc.highlight[i].forEach(id => hlIds.add(id));
+  });
+  arcs.forEach((a, i) => {
+    const age = day - a.from, on = age >= 0;
+    a.line.visible = on; a.dots.forEach(d => d.visible = on);
+    if (!on) return;
+    a.line.material.opacity = Math.min(0.85, age * 2);
+    a.dots.forEach((d, j) => { d.position.copy(a.curve.getPoint(((t * 0.45 + j / 3 + i * 0.13) % 1))); });
+    a.hl.forEach(id => hlIds.add(id));
+  });
+  applyHighlights(t);
+
+  document.querySelectorAll('#log .entry').forEach((b, i) => b.classList.toggle('on', day >= sc.entries[i].day));
+  const ik = current + ':' + sc.entries.filter(e => day >= e.day).length;
+  if (ik !== lastInsightKey) { lastInsightKey = ik; renderInsight(); }
+
+  ring.material.opacity = 0.1 + 0.04 * Math.sin(t * 1.5);
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+</body>
+</html>
