@@ -36,7 +36,7 @@ It also pulls in data from the user's existing health apps (Apple Health, Oura, 
 - **Health:** **HealthKit** directly, plus the Terra or Junction iOS SDK for Oura, WHOOP, Garmin, Fitbit.
 - **Backend:** Supabase (`supabase-swift`). Postgres with **Row Level Security on every table** (users only ever read/write their own rows). Private Storage bucket for body models (signed URLs). Edge Functions for: AI calls, scan-provider calls, integration webhooks.
 - **Voice:** Apple Speech framework (on-device) → text → AI parser.
-- **Builds:** Xcode + Swift Package Manager; TestFlight via Xcode Cloud or manual archive.
+- **Builds:** Xcode + Swift Package Manager; the Xcode project is generated from `project.yml` with XcodeGen (not committed). Platform-independent logic lives in `Packages/SkeletonCore` so it is unit-testable with `swift test`. TestFlight via Xcode Cloud or manual archive.
 - **Secrets:** all API keys live in Supabase Edge Function secrets. Never in the app binary. Provide `.env.example` for the backend and an `xcconfig` for public config (Supabase URL + anon key only).
 
 ```

@@ -1,0 +1,14 @@
+// Public app configuration. Only the Supabase URL and anon key belong here; every other
+// key (Anthropic, in3D, Meshy, Terra/Junction) lives in Supabase Edge Function secrets.
+//
+// Put real values in Skeleton.local.xcconfig (gitignored). Copy the example to start:
+//   cp App/Config/Skeleton.local.xcconfig.example App/Config/Skeleton.local.xcconfig
+//
+// With no values set the app runs end-to-end on mock services.
+
+SUPABASE_URL =
+SUPABASE_ANON_KEY =
+// mock | live. The SKELETON_SERVICES scheme environment variable overrides this at run time.
+SKELETON_SERVICES = mock
+
+#include? "Skeleton.local.xcconfig"

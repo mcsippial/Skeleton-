@@ -1,0 +1,77 @@
+# XcodeGen spec. Generate the Xcode project with:  xcodegen generate
+# (the .xcodeproj is generated, not committed, so merges never fight over project.pbxproj).
+name: Skeleton
+options:
+  bundleIdPrefix: app.skeleton
+  deploymentTarget:
+    iOS: "18.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+
+packages:
+  SkeletonCore:
+    path: Packages/SkeletonCore
+  Supabase:
+    url: https://github.com/supabase/supabase-swift
+    from: 2.5.0
+
+targets:
+  Skeleton:
+    type: application
+    platform: iOS
+    supportedDestinations: [iOS]
+    configFiles:
+      Debug: App/Config/Skeleton.xcconfig
+      Release: App/Config/Skeleton.xcconfig
+    sources:
+      - path: App/Skeleton
+      # Versioned atlas / pathway / red-flag JSON, bundled as a folder named "data".
+      - path: data
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - package: SkeletonCore
+      - package: Supabase
+        product: Supabase
+    info:
+      path: App/Skeleton/Info.plist
+      properties:
+        CFBundleDisplayName: Skeleton
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
+        ITSAppUsesNonExemptEncryption: false
+        SKSupabaseURL: $(SUPABASE_URL)
+        SKSupabaseAnonKey: $(SUPABASE_ANON_KEY)
+        SKServiceMode: $(SKELETON_SERVICES)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.skeleton.ios
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+
+schemes:
+  Skeleton:
+    build:
+      targets:
+        Skeleton: all
+    run:
+      config: Debug
+      environmentVariables:
+        SKELETON_SERVICES: mock
+    test:
+      config: Debug
+      targets:
+        - package: SkeletonCore/SkeletonCoreTests
+    archive:
+      config: Release

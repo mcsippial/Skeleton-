@@ -1,0 +1,150 @@
+{
+  "version": "1.0.0",
+  "description": "Red-flag rules. Matched by rules only, never by AI alone. Any match is shown first with a clear seek-care message, and the AI cannot remove or soften it. A rule matches when ANY of its clauses matches; a clause matches when ALL of its conditions hold. Condition keys: regions_any (an active pain is in one of these atlas regions), symptoms_any / symptoms_all (symptom IDs below, reported by the user), pain_types_in_regions (an active pain of one of these types in one of these regions), min_intensity (an active pain in the clause's regions_any, or anywhere if none given, is at least this intense).",
+  "urgency_levels": {
+    "emergency": { "headline": "Call emergency services now", "action": "call_emergency" },
+    "urgent": { "headline": "Seek medical care now", "action": "seek_care_now" }
+  },
+  "symptoms": [
+    { "id": "chest_pressure", "question": "Chest pressure, squeezing or tightness?" },
+    { "id": "shortness_of_breath", "question": "Short of breath?" },
+    { "id": "sweating", "question": "Cold sweat or clammy skin?" },
+    { "id": "exertional", "question": "Comes on with physical effort?" },
+    { "id": "worst_headache_ever", "question": "Sudden, severe headache, the worst you've ever had?" },
+    { "id": "fever", "question": "Fever or chills?" },
+    { "id": "stiff_neck", "question": "Stiff neck (hard to touch chin to chest)?" },
+    { "id": "saddle_numbness", "question": "Numbness in the groin, genitals, buttocks or inner thighs?" },
+    { "id": "bladder_bowel_change", "question": "New trouble controlling or passing urine or stool?" },
+    { "id": "new_weakness", "question": "New weakness in an arm, leg or face?" },
+    { "id": "new_numbness", "question": "New numbness on one side of the body?" },
+    { "id": "facial_droop", "question": "Face drooping on one side?" },
+    { "id": "slurred_speech", "question": "Slurred or confused speech?" },
+    { "id": "unexplained_weight_loss", "question": "Weight loss you can't explain?" },
+    { "id": "urinary_symptoms", "question": "Pain or burning when peeing, or blood in urine?" },
+    { "id": "calf_swelling", "question": "One calf swollen, warm or red?" },
+    { "id": "significant_trauma", "question": "Did this start after a fall, crash or hard hit?" },
+    { "id": "severe_abdominal_pain", "question": "Severe pain in the belly?" },
+    { "id": "testicular_swelling", "question": "Swelling or pain in a testicle?" },
+    { "id": "worsening_despite_rest", "question": "Steadily getting worse even with rest?" },
+    { "id": "night_pain_every_night", "question": "Wakes you up at night, every night?" }
+  ],
+  "rules": [
+    {
+      "id": "cardiac",
+      "title": "Possible heart-related pain",
+      "urgency": "emergency",
+      "message": "Chest pain or pressure, especially with pain in the jaw, arm or back, shortness of breath, sweating, or on exertion, can be the heart. Call emergency services now.",
+      "any": [
+        { "regions_any": ["chest_l", "chest_r", "sternum"] },
+        { "symptoms_any": ["chest_pressure"] },
+        {
+          "regions_any": ["jaw_l", "jaw_r", "chin", "throat", "neck_ant_l", "neck_ant_r", "upper_arm_ant_l", "upper_arm_post_l", "forearm_ant_l", "upper_back_l", "upper_back_r", "scapula_l", "epigastric"],
+          "symptoms_any": ["shortness_of_breath", "sweating", "exertional"]
+        }
+      ]
+    },
+    {
+      "id": "headache_emergency",
+      "title": "Headache that needs urgent care",
+      "urgency": "emergency",
+      "message": "A sudden, severe (worst-ever) headache, or a headache with fever and a stiff neck, needs emergency care now.",
+      "any": [
+        { "symptoms_any": ["worst_headache_ever"] },
+        {
+          "regions_any": ["forehead", "crown", "temple_l", "temple_r", "occiput_l", "occiput_r", "face_l", "face_r", "neck_post_l", "neck_post_r"],
+          "symptoms_all": ["fever", "stiff_neck"]
+        }
+      ]
+    },
+    {
+      "id": "cauda_equina",
+      "title": "Back pain with nerve warning signs",
+      "urgency": "emergency",
+      "message": "Back pain with numbness in the groin or inner thighs, or new bladder or bowel problems, can mean pressure on the nerves at the base of the spine. Get emergency care now.",
+      "any": [
+        { "symptoms_any": ["saddle_numbness", "bladder_bowel_change"] },
+        {
+          "regions_any": ["lumbar_l", "lumbar_r", "si_joint_l", "si_joint_r", "tailbone", "buttock_l", "buttock_r"],
+          "pain_types_in_regions": {
+            "pain_types": ["numbness"],
+            "regions": ["groin_l", "groin_r", "thigh_med_l", "thigh_med_r", "pubic", "tailbone", "buttock_l", "buttock_r"]
+          }
+        }
+      ]
+    },
+    {
+      "id": "new_neuro_deficit",
+      "title": "Possible stroke or nerve emergency",
+      "urgency": "emergency",
+      "message": "New weakness, numbness on one side, a drooping face or slurred speech can be a stroke. Call emergency services now and note the time it started.",
+      "any": [
+        { "symptoms_any": ["new_weakness", "new_numbness", "facial_droop", "slurred_speech"] }
+      ]
+    },
+    {
+      "id": "back_pain_systemic",
+      "title": "Back or flank pain with fever or weight loss",
+      "urgency": "urgent",
+      "message": "Back or flank pain with a fever, or with weight loss you can't explain, should be checked by a doctor today.",
+      "any": [
+        {
+          "regions_any": ["lumbar_l", "lumbar_r", "mid_back_l", "mid_back_r", "upper_back_l", "upper_back_r", "flank_l", "flank_r", "si_joint_l", "si_joint_r", "tailbone"],
+          "symptoms_any": ["fever", "unexplained_weight_loss"]
+        }
+      ]
+    },
+    {
+      "id": "kidney_urinary",
+      "title": "Flank pain with urinary symptoms",
+      "urgency": "urgent",
+      "message": "Flank or groin pain with burning, blood in the urine or fever can be a kidney stone or infection. See a doctor today.",
+      "any": [
+        {
+          "regions_any": ["flank_l", "flank_r", "groin_l", "groin_r", "suprapubic", "abd_lower_l", "abd_lower_r"],
+          "symptoms_any": ["urinary_symptoms"]
+        }
+      ]
+    },
+    {
+      "id": "dvt",
+      "title": "Possible blood clot in the leg",
+      "urgency": "urgent",
+      "message": "One calf that is swollen, warm and painful can be a blood clot. Get medical care now, and call emergency services if you also feel short of breath or have chest pain.",
+      "any": [
+        { "symptoms_any": ["calf_swelling"] },
+        { "regions_any": ["calf_l", "calf_r", "knee_post_l", "knee_post_r"], "symptoms_any": ["shortness_of_breath"] }
+      ]
+    },
+    {
+      "id": "trauma",
+      "title": "Pain after an injury",
+      "urgency": "urgent",
+      "message": "Pain after a significant fall, crash or blow should be checked by a doctor to rule out a fracture or internal injury.",
+      "any": [
+        { "symptoms_any": ["significant_trauma"] }
+      ]
+    },
+    {
+      "id": "abdominal_or_testicular",
+      "title": "Severe belly or testicular pain",
+      "urgency": "emergency",
+      "message": "Severe abdominal pain, or groin pain with a swollen testicle, needs emergency care now.",
+      "any": [
+        { "symptoms_any": ["severe_abdominal_pain", "testicular_swelling"] },
+        {
+          "regions_any": ["abd_upper_l", "abd_upper_r", "abd_lower_l", "abd_lower_r", "epigastric", "umbilical", "suprapubic"],
+          "min_intensity": 8
+        }
+      ]
+    },
+    {
+      "id": "progressive_or_night",
+      "title": "Pain that keeps getting worse",
+      "urgency": "urgent",
+      "message": "Pain that steadily worsens despite rest, or wakes you every night, should be checked by a doctor soon.",
+      "any": [
+        { "symptoms_any": ["worsening_despite_rest", "night_pain_every_night"] }
+      ]
+    }
+  ]
+}
