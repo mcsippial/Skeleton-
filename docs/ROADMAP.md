@@ -43,6 +43,13 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [x] Shareable report link (private `reports` bucket, 7-day signed URL; live mode)
 - [x] Insights saved per episode (reused until the episode changes) + per-user daily AI limits (`AI_DAILY_LIMIT_PARSE` 60, `AI_DAILY_LIMIT_INSIGHT` 25)
 
+## Core: single-pain insight (added Oct 2026)
+- [x] Region guides for every body area (`data/region-guides.json`, needs clinical review before launch)
+- [x] Rules: ranked causes with "why" tags from the person's data, follow-up questions, spread, warning signs, red flags
+- [x] `pain-insight` Edge Function (Claude within the rules' candidates; saved per pain; daily limit)
+- [x] Insight screen opens after every logged pain; reachable from each spot's history and the home sheet
+- [ ] Clinical review of the region guides and red-flag wording
+
 ## Phase 3 — Health integrations
 - [x] Apple Health directly (HealthKit, read-only): sleep, HRV, resting HR, steps, workouts, weight; demo data in demo mode
 - [x] Metrics on the timeline; fed to the cause engine (`HealthSummary`: before-onset vs usual), shown on the insight card and report

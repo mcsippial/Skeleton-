@@ -19,6 +19,7 @@ struct BodyScreen: View {
     init(app: AppModel, profile: Profile) {
         self.profile = profile
         _model = State(initialValue: BodyViewModel(data: app.data, pain: app.pain, insights: app.insights,
+                                                   painInsights: app.painInsights,
                                                    parser: app.parser, health: app.health,
                                                    healthConnected: app.isHealthConnected(profile.userID),
                                                    profile: profile))
@@ -78,6 +79,13 @@ struct BodyScreen: View {
         .sheet(isPresented: $showProfile) {
             OnboardingView(userID: profile.userID, existing: profile) { showProfile = false }
                 .presentationBackground { GlowBackground() }
+        }
+        .sheet(isPresented: Bindable(model).isPainInsightPresented) {
+            PainInsightView(model: model)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground { GlowBackground() }
+                .presentationCornerRadius(Theme.Radius.large)
         }
         .sheet(isPresented: Bindable(model).isDescribeSheetPresented) {
             DescribePainSheet(model: model)
@@ -213,7 +221,9 @@ struct BodyScreen: View {
             return ("Your \(ep.title.replacingOccurrences(of: " → ", with: " and ").lowercased()) pain may be connected", "See why")
         }
         if episodes.count > 1 { return ("\(episodes.count) of your pains may be connected", "See why") }
-        if !model.spots.isEmpty { return ("Tap a glowing spot to see its history", nil) }
+        if let latest = model.latestEntry, let region = latest.regionIDs.first {
+            return ("What may be behind your \(model.regionName(region).lowercased()) pain", "See why")
+        }
         return ("Tap where it hurts, or use the mic to describe it", nil)
     }
 
@@ -247,9 +257,13 @@ struct BodyScreen: View {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
                     if abs(g.translation.height) < 8 {
                         // A tap: "See why" opens the pattern directly when there's just one.
-                        if !panelExpanded, model.selectedEpisode == nil, model.selection == nil, model.selectedSpot == nil,
-                           model.episodes.count == 1, let ep = model.episodes.first {
-                            model.open(ep)
+                        if !panelExpanded, model.selectedEpisode == nil, model.selection == nil, model.selectedSpot == nil {
+                            if model.episodes.count == 1, let ep = model.episodes.first {
+                                model.open(ep)
+                            } else if model.episodes.isEmpty, let latest = model.latestEntry {
+                                model.openPainInsight(latest.id)
+                                return
+                            }
                         }
                         panelExpanded.toggle()
                     } else if dy < -30 {
@@ -372,6 +386,7 @@ struct BodyScreen: View {
                 .font(.system(size: 17, weight: .semibold))
                 .tracking(-0.2)
             ForEach(list) { e in
+                Button { model.openPainInsight(e.id) } label: {
                 HStack(alignment: .top, spacing: 10) {
                     Text("\(e.intensity)")
                         .font(.system(size: 13, weight: .bold).monospacedDigit())
@@ -389,8 +404,18 @@ struct BodyScreen: View {
                                 .font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
                         }
                     }
+                    Spacer(minLength: 6)
+                    Text("Insight")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.Color.secondaryText)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Theme.Color.secondaryText)
                 }
                 .padding(.top, 4)
+                .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
             HStack(spacing: 8) {
                 Button("Log pain here") { model.startLogging(region: region) }

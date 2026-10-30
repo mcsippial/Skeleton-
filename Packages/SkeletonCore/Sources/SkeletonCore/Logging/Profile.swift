@@ -84,6 +84,7 @@ public struct Profile: Codable, Sendable, Hashable {
     }
 
     public var demographics: Demographics {
-        Demographics(age: age(), sex: sex, heightCm: heightCm, weightKg: weightKg, activityLevel: activityLevel?.rawValue)
+        Demographics(age: age(), sex: sex, heightCm: heightCm, weightKg: weightKg, activityLevel: activityLevel?.rawValue,
+                     history: medicalHistory)
     }
 }

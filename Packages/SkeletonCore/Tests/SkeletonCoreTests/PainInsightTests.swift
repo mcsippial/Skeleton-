@@ -142,8 +142,8 @@ final class PainInsightWireTests: XCTestCase {
         let F = Fixtures.self
         let rules = PainInsightRules(data: F.data, guides: F.data.guides!)
         let e = PainEntry(userID: DemoData.userID, regionIDs: ["lumbar_l"], painType: .sharp, intensity: 6, onsetAt: Date(), triggers: ["Lifting"])
-        let req = rules.request(for: e, allEntries: [e], demographics: Demographics(age: 34, sex: .male))
-        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(EdgeWire.PainInsightWireRequest(req, atlas: F.data.atlas, medicalHistory: ["Desk job"]))) as? [String: Any])
+        let req = rules.request(for: e, allEntries: [e], demographics: Demographics(age: 34, sex: .male, history: ["Desk job"]))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(EdgeWire.PainInsightWireRequest(req, atlas: F.data.atlas))) as? [String: Any])
         XCTAssertEqual((json["candidates"] as? [[String: Any]])?.first?["id"] as? String, "lower_back.strain")
         XCTAssertEqual(((json["pain"] as? [String: Any])?["regions"] as? [[String: Any]])?.first?["name"] as? String, "Left lower back")
         XCTAssertEqual((json["guide"] as? [String: Any])?["area"] as? String, "Lower back")

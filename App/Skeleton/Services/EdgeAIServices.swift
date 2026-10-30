@@ -33,4 +33,16 @@ struct EdgeInsightProvider: InsightProvider {
         return (response.insight, response.model)
     }
 }
+/// Single-pain insight backed by the `pain-insight` Edge Function. The rules layer runs on the
+/// device before (candidates, questions, red flags) and after (PainInsightValidator) this call.
+struct EdgePainInsightProvider: PainInsightProvider {
+    let client: SupabaseClient
+    let atlas: BodyAtlas
+
+    func insight(for request: PainInsightRequest) async throws -> (output: AIPainInsightOutput, model: String) {
+        let response: EdgeWire.PainInsightWireResponse = try await client.functions.invoke(
+            "pain-insight", options: FunctionInvokeOptions(body: EdgeWire.PainInsightWireRequest(request, atlas: atlas)))
+        return (response.insight, response.model)
+    }
+}
 #endif

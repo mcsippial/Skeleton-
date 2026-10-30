@@ -154,7 +154,7 @@ public extension EdgeWire {
         let demographics: Demo?
         let health_context: [Health]
 
-        public init(_ r: PainInsightRequest, atlas: BodyAtlas, medicalHistory: [String] = []) {
+        public init(_ r: PainInsightRequest, atlas: BodyAtlas) {
             let iso = ISO8601DateFormatter()
             func cap(_ s: String, _ n: Int = 300) -> String { String(s.prefix(n)) }
             let e = r.entry
@@ -175,7 +175,7 @@ public extension EdgeWire {
             linked_pattern = r.linkedEpisode.map { cap($0.title) }
             guide = r.guide.map { Guide(area: $0.title, self_care: $0.selfCare, avoid: $0.avoid, see_someone_if: $0.seeSomeoneIf, specialist: $0.specialist) }
             demographics = r.demographics.map {
-                Demo(age: $0.age, sex: $0.sex.rawValue, activity_level: $0.activityLevel, history: medicalHistory.prefix(20).map { cap($0) })
+                Demo(age: $0.age, sex: $0.sex.rawValue, activity_level: $0.activityLevel, history: $0.history.prefix(20).map { cap($0) })
             }
             health_context = r.healthContext.prefix(10).map { Health(metric: cap($0.metric), summary: cap($0.summary)) }
         }

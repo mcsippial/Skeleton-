@@ -7,6 +7,7 @@ final class BodyViewModel {
     let data: SkeletonData
     let pain: any PainRepository
     let insights: any InsightProvider
+    let painInsights: any PainInsightProvider
     let parser: any TextPainParser
     let health: any HealthService
     let userID: UUID
@@ -46,10 +47,11 @@ final class BodyViewModel {
     private var flashTask: Task<Void, Never>?
 
     init(data: SkeletonData, pain: any PainRepository, insights: any InsightProvider,
-         parser: any TextPainParser, health: any HealthService, healthConnected: Bool, profile: Profile) {
+         painInsights: any PainInsightProvider, parser: any TextPainParser, health: any HealthService, healthConnected: Bool, profile: Profile) {
         self.data = data
         self.pain = pain
         self.insights = insights
+        self.painInsights = painInsights
         self.parser = parser
         self.health = health
         self.healthConnected = healthConnected
@@ -284,6 +286,90 @@ final class BodyViewModel {
         }
     }
 
+    // MARK: Single-pain insight
+
+    /// The pain whose insight sheet is open.
+    private(set) var painInsightEntryID: UUID?
+    private(set) var painInsight: PainInsight?
+    /// True while the AI version is being written (the rules version is already showing).
+    private(set) var painInsightRefining = false
+    private(set) var painInsightNote: String?
+    private var painInsightCache: [String: PainInsight] = [:]
+    private var painInsightTask: Task<Void, Never>?
+
+    var isPainInsightPresented: Bool {
+        get { painInsightEntryID != nil }
+        set { if !newValue { closePainInsight() } }
+    }
+
+    private var painEngine: PainInsightEngine? {
+        guard let guides = data.guides else { return nil }
+        return PainInsightEngine(rules: PainInsightRules(data: data, guides: guides), provider: painInsights)
+    }
+
+    private func cacheKey(_ e: PainEntry) -> String {
+        "\(e.id.uuidString)|\((e.clarifications ?? []).map { "\($0.questionID)=\($0.answer.rawValue)" }.joined(separator: ","))|\(healthConnected)"
+    }
+
+    /// Opens the insight for one pain: the rules version instantly, then the AI's version.
+    func openPainInsight(_ entryID: UUID) {
+        guard let entry = entries.first(where: { $0.id == entryID }), let engine = painEngine else { return }
+        painInsightEntryID = entryID
+        painInsightNote = nil
+        tooltip = nil
+        let key = cacheKey(entry)
+        if let cached = painInsightCache[key] {
+            painInsight = cached
+            painInsightRefining = false
+            return
+        }
+        let all = entries, metrics = self.metrics, demographics = self.demographics
+        painInsight = engine.instant(for: entry, allEntries: all, metrics: metrics, demographics: demographics)
+        painInsightRefining = true
+        painInsightTask?.cancel()
+        painInsightTask = Task {
+            defer { if painInsightEntryID == entryID { painInsightRefining = false } }
+            do {
+                let result = try await engine.insight(for: entry, allEntries: all, metrics: metrics, demographics: demographics)
+                guard !Task.isCancelled, painInsightEntryID == entryID else { return }
+                painInsight = result
+                painInsightCache[key] = result
+            } catch {
+                guard !Task.isCancelled, painInsightEntryID == entryID else { return }
+                painInsightNote = "Showing Skeleton's guide for this area. The personalised explanation isn't available right now."
+            }
+        }
+    }
+
+    /// Records an answer to a follow-up question, saves it on the entry, and refreshes the insight.
+    func answer(_ question: FollowUpQuestion, _ answer: ClarificationAnswer) async {
+        guard let id = painInsightEntryID, var entry = entries.first(where: { $0.id == id }) else { return }
+        var answers = entry.clarifications ?? []
+        answers.removeAll { $0.questionID == question.id }
+        answers.append(Clarification(questionID: question.id, question: question.question, answer: answer))
+        entry.clarifications = answers
+        if let i = entries.firstIndex(where: { $0.id == id }) { entries[i] = entry }
+        do { try await pain.update(entry) } catch { painInsightNote = "Couldn't save your answer. \(error.localizedDescription)" }
+        openPainInsight(id)
+    }
+
+    func closePainInsight() {
+        painInsightTask?.cancel()
+        painInsightEntryID = nil
+        painInsight = nil
+        painInsightRefining = false
+    }
+
+    /// From a pain's insight to the pattern it belongs to.
+    func openPattern(from insight: PainInsight) {
+        guard let ep = insight.linkedEpisode else { return }
+        closePainInsight()
+        open(ep)
+    }
+
+    /// The most recent entry, for "see what may be behind it" on the home sheet.
+    var latestEntry: PainEntry? { entries.max { $0.onsetAt < $1.onsetAt } }
+
     func closeEpisode() {
         endReplay()
         selectedEpisode = nil
@@ -429,13 +515,10 @@ final class BodyViewModel {
         await loadEntries()
         cancelLogging()
         selection = nil
-        // If this pain links to an earlier one, go straight to the episode's insight.
-        if let episode = episodes.first(where: { $0.entryIDs.contains(entry.id) }) {
-            open(episode)
-        } else {
-            selectedEpisode = nil
-            selectedSpot = entry.regionIDs.first
-        }
+        // Every logged pain gets its own insight straight away (it links to its pattern, if any).
+        selectedEpisode = nil
+        selectedSpot = entry.regionIDs.first
+        openPainInsight(entry.id)
     }
 
     /// The entry the sheet would save (falls back to "aching" only for the live red-flag preview).

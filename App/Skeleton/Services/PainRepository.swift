@@ -8,6 +8,7 @@ import Supabase
 protocol PainRepository: Sendable {
     func entries() async throws -> [PainEntry]
     func add(_ entry: PainEntry) async throws
+    func update(_ entry: PainEntry) async throws
     func delete(id: UUID) async throws
 }
 
@@ -20,6 +21,9 @@ actor MockPainRepository: PainRepository {
 
     func entries() async throws -> [PainEntry] { store.sorted { $0.onsetAt < $1.onsetAt } }
     func add(_ entry: PainEntry) async throws { store.append(entry) }
+    func update(_ entry: PainEntry) async throws {
+        if let i = store.firstIndex(where: { $0.id == entry.id }) { store[i] = entry }
+    }
     func delete(id: UUID) async throws { store.removeAll { $0.id == id } }
 }
 
@@ -38,6 +42,10 @@ struct SupabasePainRepository: PainRepository {
 
     func add(_ entry: PainEntry) async throws {
         try await client.from("pain_entries").insert(entry).execute()
+    }
+
+    func update(_ entry: PainEntry) async throws {
+        try await client.from("pain_entries").update(entry).eq("id", value: entry.id.uuidString).execute()
     }
 
     func delete(id: UUID) async throws {

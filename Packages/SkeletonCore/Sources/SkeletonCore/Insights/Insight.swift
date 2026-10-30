@@ -6,13 +6,17 @@ public struct Demographics: Codable, Sendable, Hashable {
     public var heightCm: Double?
     public var weightKg: Double?
     public var activityLevel: String?
+    /// Relevant history the person chose to add in onboarding.
+    public var history: [String]
 
-    public init(age: Int? = nil, sex: BiologicalSex = .unspecified, heightCm: Double? = nil, weightKg: Double? = nil, activityLevel: String? = nil) {
+    public init(age: Int? = nil, sex: BiologicalSex = .unspecified, heightCm: Double? = nil, weightKg: Double? = nil,
+                activityLevel: String? = nil, history: [String] = []) {
         self.age = age
         self.sex = sex
         self.heightCm = heightCm
         self.weightKg = weightKg
         self.activityLevel = activityLevel
+        self.history = history
     }
 }
 
