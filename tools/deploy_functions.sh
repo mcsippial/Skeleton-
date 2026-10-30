@@ -4,7 +4,7 @@
 set -e
 REF="${SUPABASE_PROJECT_REF:-otintmfebdkxkrqgryut}"
 cd "$(dirname "$0")/../supabase/functions"
-for fn in parse-pain cause-engine; do
+for fn in parse-pain cause-engine pain-insight; do
   set --
   for f in $fn/index.ts $fn/deno.json _shared/*.ts _shared/data/*.json; do set -- "$@" -F "file=@$f;filename=$f"; done
   meta="{\"entrypoint_path\":\"$fn/index.ts\",\"import_map_path\":\"$fn/deno.json\",\"name\":\"$fn\",\"verify_jwt\":true}"

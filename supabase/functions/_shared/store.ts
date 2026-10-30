@@ -103,6 +103,7 @@ export function userIdFrom(req: Request): string | null {
 export const DAILY_LIMITS: Record<string, number> = {
   "parse-pain": Number(env("AI_DAILY_LIMIT_PARSE") ?? 60),
   "cause-engine": Number(env("AI_DAILY_LIMIT_INSIGHT") ?? 25),
+  "pain-insight": Number(env("AI_DAILY_LIMIT_PAIN_INSIGHT") ?? 40),
 };
 
 export class DailyLimitError extends Error {}

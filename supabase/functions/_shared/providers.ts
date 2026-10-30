@@ -2,6 +2,7 @@ import { env } from "./env.ts";
 import { createClient } from "./claude.ts";
 import { ClaudePainParser, MockPainParser, type PainParser } from "./pain-parser.ts";
 import { ClaudeInsightProvider, type InsightProvider, MockInsightProvider } from "./insight.ts";
+import { ClaudePainInsightProvider, MockPainInsightProvider, type PainInsightProvider } from "./pain-insight.ts";
 
 /** AI_PROVIDER=claude needs ANTHROPIC_API_KEY; anything else (or no key) runs the mocks. */
 function useClaude(): boolean {
@@ -19,4 +20,8 @@ export function painParser(): PainParser {
 
 export function insightProvider(): InsightProvider {
   return useClaude() ? new ClaudeInsightProvider(createClient()) : new MockInsightProvider();
+}
+
+export function painInsightProvider(): PainInsightProvider {
+  return useClaude() ? new ClaudePainInsightProvider(createClient()) : new MockPainInsightProvider();
 }

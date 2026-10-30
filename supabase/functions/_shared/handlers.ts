@@ -2,6 +2,7 @@
 import { json } from "./cors.ts";
 import { errorResponse, readJSON } from "./http.ts";
 import { InsightRequest, type InsightProvider } from "./insight.ts";
+import { PainInsightRequest, type PainInsightProvider } from "./pain-insight.ts";
 import type { PainParser } from "./pain-parser.ts";
 import { checkLimit, sha256, type Store, userIdFrom } from "./store.ts";
 import { model } from "./claude.ts";
@@ -51,6 +52,38 @@ export function causeEngineHandler(provider: InsightProvider, store: Store, mode
         user_id: userId,
         episode_key: key,
         rules_output: { pathway_ids: parsed.data.pathways.map((p) => p.id), red_flag_ids: parsed.data.red_flags.map((f) => f.id) },
+        ai_output: result.insight,
+        red_flags: parsed.data.red_flags.map((f) => f.id),
+        model_version: result.model,
+      });
+      return json({ ...result, cached: false });
+    } catch (error) {
+      return errorResponse(error);
+    }
+  };
+}
+
+export function painInsightHandler(provider: PainInsightProvider, store: Store, modelName: () => string = model) {
+  return async (req: Request): Promise<Response> => {
+    const body = await readJSON(req);
+    if (body instanceof Response) return body;
+    const userId = userIdFrom(req);
+    if (!userId) return json({ error: "sign_in_required" }, 401);
+    const parsed = PainInsightRequest.safeParse(body);
+    if (!parsed.success) return json({ error: "invalid_request", issues: parsed.error.issues.length }, 400);
+    try {
+      // Same pain, answers and context + same model → reuse the saved insight.
+      const key = await sha256(JSON.stringify({ kind: "pain", model: modelName(), request: parsed.data }));
+      const cached = await store.cachedInsight(userId, key);
+      if (cached) return json({ insight: cached.ai_output, model: cached.model_version, cached: true });
+
+      await checkLimit(store, userId, "pain-insight");
+      const result = await provider.insight(parsed.data);
+      await store.recordUsage(userId, "pain-insight");
+      await store.saveInsight({
+        user_id: userId,
+        episode_key: key,
+        rules_output: { kind: "pain", candidate_ids: parsed.data.candidates.map((c) => c.id), regions: parsed.data.pain.regions.map((r) => r.id) },
         ai_output: result.insight,
         red_flags: parsed.data.red_flags.map((f) => f.id),
         model_version: result.model,
