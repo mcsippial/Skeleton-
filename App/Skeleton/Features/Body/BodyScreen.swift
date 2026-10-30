@@ -9,8 +9,9 @@ struct BodyScreen: View {
     @State private var showGallery = false
     @State private var panelContentHeight: CGFloat = 0
 
-    init(data: SkeletonData, pain: any PainRepository, userID: UUID) {
-        _model = State(initialValue: BodyViewModel(data: data, pain: pain, userID: userID))
+    init(app: AppModel, userID: UUID) {
+        _model = State(initialValue: BodyViewModel(data: app.data, pain: app.pain, insights: app.insights,
+                                                   parser: app.parser, userID: userID))
     }
 
     var body: some View {
@@ -18,6 +19,9 @@ struct BodyScreen: View {
             header
             layerChips
             stage
+            TimelineBar(model: model)
+                .padding(.horizontal, 18)
+                .padding(.bottom, 10)
             panel
         }
         .task {
@@ -26,6 +30,12 @@ struct BodyScreen: View {
             _ = await (bodyLoad, historyLoad)
         }
         .sheet(isPresented: $showGallery) { DesignGalleryView(data: app.data) }
+        .sheet(isPresented: Bindable(model).isDescribeSheetPresented) {
+            DescribePainSheet(model: model)
+                .presentationDetents([.medium])
+                .presentationBackground(.ultraThinMaterial)
+                .presentationCornerRadius(Theme.Radius.large)
+        }
         .sheet(isPresented: Bindable(model).isLogSheetPresented, onDismiss: {
             // Swiping the sheet away cancels, unless it closed to let the user pick more spots.
             if !model.isPickingSpots { model.cancelLogging() }
@@ -44,6 +54,15 @@ struct BodyScreen: View {
         HStack {
             Text("Skeleton").font(.system(size: 22, weight: .bold)).tracking(-0.4)
             Spacer()
+            Button { model.isDescribeSheetPresented = true } label: {
+                Label("Describe", systemImage: "text.bubble")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Theme.Color.text)
+                    .padding(.horizontal, 12)
+                    .frame(height: 36)
+                    .glass(Capsule())
+            }
+            .buttonStyle(.plain)
             Menu {
                 Button("Design system", systemImage: "square.grid.2x2") { showGallery = true }
                 Button("Reset view", systemImage: "arrow.counterclockwise") { model.resetCamera() }
@@ -170,7 +189,10 @@ struct BodyScreen: View {
                         selectionCard(s)
                     } else if let spot = model.selectedSpot {
                         historyCard(spot)
+                    } else if let episode = model.selectedEpisode {
+                        InsightCard(model: model, episode: episode)
                     } else {
+                        EpisodesCard(model: model)
                         GlassCard(label: "Your body") {
                             Text(model.spots.isEmpty
                                  ? "Tap any spot to identify it, then log pain there."
@@ -186,7 +208,7 @@ struct BodyScreen: View {
                 .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { panelContentHeight = $0 }
             }
             .scrollBounceBehavior(.basedOnSize)
-            .frame(height: min(panelContentHeight, 300))
+            .frame(height: min(panelContentHeight, 320))
         }
         .padding(.horizontal, 16)
         .padding(.top, 14)

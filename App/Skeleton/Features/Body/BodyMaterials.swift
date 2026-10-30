@@ -53,6 +53,14 @@ enum BodyMaterials {
         return m
     }
 
+    /// Warm glow for structures along an active pain pathway (e.g. psoas + groin nerves for back → groin).
+    static func glowing(for layer: AnatomyLayer) -> PhysicallyBasedMaterial {
+        var m = base(for: layer)
+        m.emissiveColor = .init(color: UIColor(hex: 0xFF6A3D))
+        m.emissiveIntensity = 0.9
+        return m
+    }
+
     static var floorRing: UnlitMaterial {
         var m = UnlitMaterial(color: UIColor(hex: 0x0B0B0C))
         m.blending = .transparent(opacity: .init(floatLiteral: 0.12))

@@ -14,6 +14,8 @@ final class BodySceneController {
     private let spotsRoot = Entity()
     private var spotEntities: [String: Entity] = [:]
     private var renderedSpots: [String: SpotRender] = [:]
+    private let arcsRoot = Entity()
+    private var arcEntities: [String: Entity] = [:]
     private var layerGroups: [AnatomyLayer: Entity] = [:]
     private var applied = AppliedState()
     private var cameraAnimation: AnimationPlaybackController?
@@ -23,6 +25,7 @@ final class BodySceneController {
         var visibleLayers: Set<AnatomyLayer> = []
         var skinOpacity: Float = -1
         var flashID: String?
+        var glowIDs: Set<String> = []
         var cameraRevision = -1
     }
 
@@ -54,6 +57,8 @@ final class BodySceneController {
         addFloorRing()
         spotsRoot.name = "pain-spots"
         root.addChild(spotsRoot)
+        arcsRoot.name = "flow-arcs"
+        root.addChild(arcsRoot)
 
         camera.camera.fieldOfViewInDegrees = 34
         camera.camera.near = 0.05
@@ -69,6 +74,14 @@ final class BodySceneController {
         var cameraRevision: Int
         var cameraAnimated: Bool
         var spots: [SpotRender]
+        var arcs: [ArcRender]
+        /// Structures along an active pain pathway (they glow).
+        var glowIDs: Set<String>
+    }
+
+    struct ArcRender: Equatable {
+        var id: String
+        var points: [Vec3]
     }
 
     /// A glowing pain spot: colour = intensity, pulse = recent. Pending spots (being picked) are white.
@@ -94,17 +107,23 @@ final class BodySceneController {
             applied.skinOpacity = s.skinOpacity
         }
 
-        if s.flashID != applied.flashID {
-            if let old = applied.flashID, let item = structures[old] {
-                item.entity.model?.materials = [BodyMaterials.base(for: item.layer, skinOpacity: s.skinOpacity)]
-            }
-            if let new = s.flashID, let item = structures[new], item.layer != .skin {
-                item.entity.model?.materials = [BodyMaterials.tapped(for: item.layer)]
+        if s.flashID != applied.flashID || s.glowIDs != applied.glowIDs {
+            var affected = applied.glowIDs.union(s.glowIDs)
+            for id in [applied.flashID, s.flashID].compactMap({ $0 }) { affected.insert(id) }
+            for id in affected {
+                guard let item = structures[id], item.layer != .skin else { continue }
+                let material: PhysicallyBasedMaterial
+                if id == s.flashID { material = BodyMaterials.tapped(for: item.layer) }
+                else if s.glowIDs.contains(id) { material = BodyMaterials.glowing(for: item.layer) }
+                else { material = BodyMaterials.base(for: item.layer) }
+                item.entity.model?.materials = [material]
             }
             applied.flashID = s.flashID
+            applied.glowIDs = s.glowIDs
         }
 
         updateSpots(s.spots)
+        updateArcs(s.arcs)
 
         if s.cameraRevision != applied.cameraRevision {
             let transform = Self.transform(for: s.camera)
@@ -198,6 +217,49 @@ final class BodySceneController {
     static func painColor(_ intensity: Int) -> UIColor {
         let k = CGFloat(min(max(intensity, 0), 10)) / 10
         return UIColor(hue: 0.11 - k * 0.11, saturation: 1, brightness: 1, alpha: 1)
+    }
+
+    // MARK: - Flow arcs
+
+    private func updateArcs(_ arcs: [ArcRender]) {
+        let wanted = Set(arcs.map(\.id))
+        for (id, entity) in arcEntities where !wanted.contains(id) {
+            entity.removeFromParent()
+            arcEntities[id] = nil
+        }
+        for arc in arcs where arcEntities[arc.id] == nil {
+            guard let entity = Self.makeArc(arc) else { continue }
+            arcsRoot.addChild(entity)
+            arcEntities[arc.id] = entity
+        }
+    }
+
+    private static let particleMesh = try? MeshResource.generate(from: [spotDescriptor(radius: 0.007, name: "arc-particle")])
+
+    /// A thin red tube along the curve, with small particles moving in the direction pain travelled.
+    private static func makeArc(_ arc: ArcRender) -> Entity? {
+        guard arc.points.count > 2,
+              let tube = try? meshResource(MeshBuilder.tube(arc.points, radius: 0.0028, samples: 48, radialSegments: 6), name: "arc") else { return nil }
+        let group = Entity()
+        group.name = "arc.\(arc.id)"
+        var lineMaterial = UnlitMaterial(color: UIColor(hex: 0xFF4D3D))
+        lineMaterial.blending = .transparent(opacity: .init(floatLiteral: 0.85))
+        group.addChild(ModelEntity(mesh: tube, materials: [lineMaterial]))
+
+        guard let particleMesh else { return group }
+        // Resample the curve to ~60 frames per pass; three particles offset by a third each.
+        let frames = CatmullRom(points: arc.points).sample(count: 60).map { Transform(translation: $0) }
+        for k in 0..<3 {
+            let particle = ModelEntity(mesh: particleMesh, materials: [UnlitMaterial(color: .rgbWhite)])
+            let shift = k * frames.count / 3
+            let rotated = Array(frames[shift...] + frames[..<shift])
+            particle.transform = rotated[0]
+            let motion = SampledAnimation<Transform>(frames: rotated, frameInterval: 1 / 30,
+                                                      bindTarget: .transform, repeatMode: .repeat)
+            if let resource = try? AnimationResource.generate(with: motion) { particle.playAnimation(resource) }
+            group.addChild(particle)
+        }
+        return group
     }
 
     // MARK: - Building blocks

@@ -23,7 +23,7 @@ struct RootView: View {
             if model.isRestoring {
                 ProgressView()
             } else if let user = model.user {
-                BodyScreen(data: model.data, pain: model.pain, userID: user.id)
+                BodyScreen(app: model, userID: user.id)
                     .id(user.id)
                     .transition(.opacity)
             } else {

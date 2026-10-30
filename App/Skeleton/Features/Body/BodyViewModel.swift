@@ -6,6 +6,8 @@ import SkeletonCore
 final class BodyViewModel {
     let data: SkeletonData
     let pain: any PainRepository
+    let insights: any InsightProvider
+    let parser: any TextPainParser
     let userID: UUID
 
     /// All of the user's pain entries, oldest first.
@@ -19,6 +21,9 @@ final class BodyViewModel {
     /// True while the user is tapping extra spots for a multi-region entry.
     private(set) var isPickingSpots = false
     var isLogSheetPresented = false
+    /// Answers in the log sheet. Lives here so they survive closing the sheet to add spots.
+    var form = LogForm()
+    var isDescribeSheetPresented = false
 
     private(set) var stockBody: StockBody?
     var visibleLayers = Set(AnatomyLayer.allCases)
@@ -38,10 +43,131 @@ final class BodyViewModel {
     private var tooltipTask: Task<Void, Never>?
     private var flashTask: Task<Void, Never>?
 
-    init(data: SkeletonData, pain: any PainRepository, userID: UUID) {
+    init(data: SkeletonData, pain: any PainRepository, insights: any InsightProvider,
+         parser: any TextPainParser, userID: UUID) {
         self.data = data
         self.pain = pain
+        self.insights = insights
+        self.parser = parser
         self.userID = userID
+    }
+
+    private var matcher: PathwayMatcher { PathwayMatcher(library: data.pathways, atlas: data.atlas) }
+
+    // MARK: Timeline
+
+    /// Point in time the body shows. nil = live (now).
+    private(set) var timelineDate: Date?
+    private(set) var isPlaying = false
+    private var playTask: Task<Void, Never>?
+
+    var displayDate: Date { timelineDate ?? Date() }
+
+    /// From a day before the first entry to now.
+    var timelineRange: ClosedRange<Date> {
+        let now = Date()
+        let first = entries.first?.onsetAt ?? now.addingTimeInterval(-14 * 86_400)
+        return min(first.addingTimeInterval(-86_400), now.addingTimeInterval(-86_400))...now
+    }
+
+    func scrub(to date: Date) {
+        stopPlaying()
+        timelineDate = date >= timelineRange.upperBound.addingTimeInterval(-60) ? nil : date
+    }
+
+    func togglePlay() {
+        if isPlaying { stopPlaying(); return }
+        let range = timelineRange
+        let start = (timelineDate == nil) ? range.lowerBound : displayDate
+        isPlaying = true
+        playTask = Task {
+            var t = start
+            // The whole history plays in about 8 seconds.
+            let step = range.upperBound.timeIntervalSince(range.lowerBound) / (8 * 30)
+            while !Task.isCancelled, t < range.upperBound {
+                timelineDate = t
+                try? await Task.sleep(for: .milliseconds(33))
+                t = t.addingTimeInterval(step)
+            }
+            if !Task.isCancelled {
+                timelineDate = nil
+                isPlaying = false
+            }
+        }
+    }
+
+    func stopPlaying() {
+        playTask?.cancel()
+        playTask = nil
+        isPlaying = false
+    }
+
+    /// Entries that have happened by the timeline date.
+    private var entriesSoFar: [PainEntry] { entries.filter { $0.onsetAt <= displayDate } }
+
+    /// Arcs visible at the timeline date (appeared within the matching window).
+    var visibleArcs: [FlowArc] {
+        let window = TimeInterval(data.pathways.matching.defaultWindowDays * 86_400)
+        return EpisodeBuilder.arcs(entriesSoFar, matcher: matcher)
+            .filter { displayDate.timeIntervalSince($0.appearsAt) <= window }
+    }
+
+    /// Structures along pathways that became active in the last 3 days glow.
+    private var glowingStructures: Set<String> {
+        var ids = Set<String>()
+        for arc in visibleArcs where displayDate.timeIntervalSince(arc.appearsAt) <= 3 * 86_400 {
+            if let p = data.pathways.pathway(arc.pathwayID) { ids.formUnion(p.structures(for: arc.side)) }
+        }
+        return ids
+    }
+
+    private var arcRenders: [BodySceneController.ArcRender] {
+        guard let body = stockBody else { return [] }
+        return visibleArcs.compactMap { arc in
+            guard let a = body.anchor(ofRegion: arc.fromRegionID), let b = body.anchor(ofRegion: arc.toRegionID) else { return nil }
+            return .init(id: arc.id, points: FlowArc.curve(from: a, to: b))
+        }
+    }
+
+    // MARK: Episodes & insights
+
+    var episodes: [Episode] { EpisodeBuilder.episodes(entries, matcher: matcher) }
+
+    private(set) var selectedEpisode: Episode?
+    private(set) var insight: Insight?
+    private(set) var insightError: String?
+    private(set) var isLoadingInsight = false
+
+    func open(_ episode: Episode) {
+        selectedEpisode = episode
+        selection = nil
+        selectedSpot = nil
+        insight = nil
+        insightError = nil
+        if let first = entries.first(where: { $0.id == episode.entryIDs.first }), let region = first.regionIDs.first,
+           let p = stockBody?.anchor(ofRegion: region) {
+            var c = OrbitCamera.focusing(p, distance: 1.6)
+            c.target.y = p.y - 0.1
+            setCamera(c, animated: true)
+        }
+        isLoadingInsight = true
+        let engine = InsightEngine(data: data, provider: insights)
+        let all = entries
+        Task {
+            defer { isLoadingInsight = false }
+            do {
+                let result = try await engine.insight(for: episode, entries: all)
+                if selectedEpisode?.id == episode.id { insight = result }
+            } catch {
+                insightError = "Couldn't build the insight. \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func closeEpisode() {
+        selectedEpisode = nil
+        insight = nil
+        insightError = nil
     }
 
     /// Builds the stock body fitted to the user's proportions off the main thread.
@@ -57,7 +183,7 @@ final class BodyViewModel {
     var sceneState: BodySceneController.State {
         .init(visibleLayers: visibleLayers, skinOpacity: Float(skinOpacity), flashID: flashID,
               camera: camera, cameraRevision: cameraRevision, cameraAnimated: cameraAnimated,
-              spots: spotRenders)
+              spots: spotRenders, arcs: arcRenders, glowIDs: glowingStructures)
     }
 
     // MARK: Pain entries
@@ -72,7 +198,7 @@ final class BodyViewModel {
     }
 
     /// One spot per region with pain in the last 14 days.
-    var spots: [PainSpot] { PainSpot.summarize(entries, now: Date()) }
+    var spots: [PainSpot] { PainSpot.summarize(entries, now: displayDate) }
 
     private var spotRenders: [BodySceneController.SpotRender] {
         guard let body = stockBody else { return [] }
@@ -116,6 +242,7 @@ final class BodyViewModel {
     /// Starts logging from the current tap selection.
     func startLogging() {
         guard let s = selection, let region = s.region else { return }
+        form = LogForm()
         draftRegions = [region.id]
         draftPoint = SurfacePoint(stockBody?.morph.invert(s.point) ?? s.point, atlasVersion: data.atlas.version)
         isLogSheetPresented = true
@@ -123,6 +250,7 @@ final class BodyViewModel {
     }
 
     func startLogging(region: String) {
+        form = LogForm()
         draftRegions = [region]
         draftPoint = nil
         isLogSheetPresented = true
@@ -144,7 +272,29 @@ final class BodyViewModel {
         draftRegions?.removeAll { $0 == id }
     }
 
+    /// Text/voice mode: parse free text, highlight what was understood, and open the sheet to confirm.
+    /// Parsed entries are never saved without the user pressing Save.
+    func describe(_ text: String) async -> Bool {
+        guard let parsed = try? await parser.parse(text, now: Date()), !parsed.regionIDs.isEmpty else { return false }
+        var f = LogForm()
+        f.painType = parsed.painType
+        if let i = parsed.intensity { f.intensity = Double(i) }
+        if let onset = parsed.onset { f.onset = .pick; f.customOnset = onset }
+        f.pattern = parsed.pattern
+        f.inputMethod = .text
+        f.rawText = text
+        f.notes = text
+        form = f
+        draftRegions = parsed.regionIDs
+        draftPoint = nil
+        isDescribeSheetPresented = false
+        if let p = stockBody?.anchor(ofRegion: parsed.regionIDs[0]) { setCamera(.focusing(p, distance: 1.4), animated: true) }
+        isLogSheetPresented = true
+        return true
+    }
+
     func cancelLogging() {
+        form = LogForm()
         draftRegions = nil
         draftPoint = nil
         isPickingSpots = false
@@ -159,14 +309,15 @@ final class BodyViewModel {
         selectedSpot = entry.regionIDs.first
     }
 
-    /// Builds an entry from the sheet's answers (not saved).
-    func makeEntry(painType: PainType, intensity: Int, onset: Date, pattern: PainPattern?,
-                   triggers: [String], relievers: [String], symptoms: [String], notes: String) -> PainEntry? {
+    /// The entry the sheet would save (falls back to "aching" only for the live red-flag preview).
+    var draftEntry: PainEntry? {
         guard let regions = draftRegions, !regions.isEmpty else { return nil }
-        let trimmed = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-        return PainEntry(userID: userID, regionIDs: regions, surfacePoint: draftPoint, painType: painType,
-                         intensity: intensity, onsetAt: onset, pattern: pattern, triggers: triggers,
-                         relievers: relievers, symptoms: symptoms, notes: trimmed.isEmpty ? nil : trimmed)
+        let f = form
+        let notes = f.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        return PainEntry(userID: userID, regionIDs: regions, surfacePoint: draftPoint, painType: f.painType ?? .aching,
+                         intensity: Int(f.intensity.rounded()), onsetAt: f.onsetDate, pattern: f.pattern,
+                         triggers: f.triggers.sorted(), relievers: f.relievers.sorted(), symptoms: f.symptoms.sorted(),
+                         notes: notes.isEmpty ? nil : notes, inputMethod: f.inputMethod, rawText: f.rawText)
     }
 
     func toggle(_ layer: AnatomyLayer) {
@@ -243,6 +394,7 @@ final class BodyViewModel {
         // Heat spots sit on top of the body, so they win.
         if let spot = nearestSpot(along: ray) {
             selectedSpot = spot
+            selectedEpisode = nil
             selection = nil
             let count = entries(inRegion: spot).count
             showTooltip(title: regionName(spot), subtitle: "\(count) \(count == 1 ? "entry" : "entries")")
@@ -254,6 +406,7 @@ final class BodyViewModel {
             return
         }
         selectedSpot = nil
+        selectedEpisode = nil
         selection = hit
         let region = hit.region?.name ?? "Outside the mapped body"
         showTooltip(title: hit.structureName,
@@ -264,6 +417,8 @@ final class BodyViewModel {
     func clearSelection() {
         selection = nil
         selectedSpot = nil
+        selectedEpisode = nil
+        insight = nil
         tooltip = nil
     }
 
@@ -293,6 +448,33 @@ final class BodyViewModel {
         flashTask = Task {
             try? await Task.sleep(for: .seconds(1.6))
             if !Task.isCancelled { flashID = nil }
+        }
+    }
+}
+
+/// Answers in the log-pain sheet.
+struct LogForm {
+    enum OnsetChoice: Hashable { case now, earlierToday, yesterday, pick }
+
+    var painType: PainType?
+    var intensity = 5.0
+    var onset: OnsetChoice = .now
+    var customOnset = Date()
+    var pattern: PainPattern?
+    var triggers: Set<String> = []
+    var relievers: Set<String> = []
+    var symptoms: Set<String> = []
+    var notes = ""
+    var inputMethod: InputMethod = .tap
+    var rawText: String?
+
+    var onsetDate: Date {
+        let cal = Calendar.current, now = Date()
+        switch onset {
+        case .now: return now
+        case .earlierToday: return cal.date(byAdding: .hour, value: -3, to: now).map { max($0, cal.startOfDay(for: now)) } ?? now
+        case .yesterday: return cal.date(byAdding: .day, value: -1, to: now) ?? now
+        case .pick: return min(customOnset, now)
         }
     }
 }

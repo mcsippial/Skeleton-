@@ -22,11 +22,11 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [ ] Onboarding: demographics → stock body fitted to the profile (currently uses reference proportions)
 - [x] Pain entries persisted (`PainRepository`: Supabase + in-memory mock); profiles still to do
 - [x] Tap logging sheet (type, intensity, onset, pattern, triggers/relievers, notes, red-flag symptom checks), multi-spot select, live red-flag cards
-- [ ] Text logging with the mock parser → highlight regions → confirm/edit before saving
+- [x] Text logging with the mock parser (`MockTextPainParser`) → highlight regions → confirm/edit before saving
 - [x] Heat spots (colour = intensity, pulse = recent), tap a spot → history
-- [ ] Timeline scrubber, flow arcs with moving particles, episodes
-- [ ] Cause engine: rules layer (pathway matcher + red flags are in `SkeletonCore`) + AI interface with mock responses; AI-output validator + tests
-- [ ] Connected structures glow along active pathways (`linked_structures`)
+- [x] Timeline scrubber with play, flow arcs with moving particles, episodes
+- [x] Cause engine: rules layer + `InsightProvider` interface with mock responses + `InsightValidator` (pathway, diagnosis, dosing, demographics, red-flag softening) + tests
+- [x] Connected structures glow along active pathways (`linked_structures`)
 - [x] Seed demo user: lower back → groin and jaw → neck histories (mock repository)
 - [ ] App icon, TestFlight build
 - [ ] Verify on device: RealityView background is transparent over the glow; tune lighting / skin material; consider a ShaderGraph thin-film material for true iridescence

@@ -123,7 +123,7 @@ public struct RedFlagContext: Sendable {
     }
 }
 
-public struct RedFlagMatch: Sendable, Identifiable, Equatable {
+public struct RedFlagMatch: Sendable, Identifiable, Hashable {
     public let id: String
     public let title: String
     public let headline: String
