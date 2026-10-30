@@ -17,6 +17,7 @@ struct OnboardingView: View {
     @State private var historyNote = ""
     @State private var saving = false
     @State private var error: String?
+    @State private var healthState: String?
 
     enum Step: Int, CaseIterable { case welcome, about, body, history, ready }
 
@@ -185,9 +186,32 @@ struct OnboardingView: View {
                 Text("Scanning yourself into a realistic model is coming soon.")
                     .font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
             }
-            GlassCard(label: "Health apps") {
-                Text("Connecting Apple Health, Oura, WHOOP, Garmin and Fitbit is coming soon, so sleep and recovery can be tied to your pain.")
+            GlassCard(label: "Health apps (optional)") {
+                Text("Connect Apple Health so sleep, recovery, activity and weight show next to your pain and help explain flares. Oura, WHOOP, Garmin and Fitbit are coming soon.")
                     .font(Theme.Font.callout)
+                if app.isDemoMode {
+                    Text("Demo health data is connected.").font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
+                } else if app.isHealthConnected(userID) || healthState == "connected" {
+                    Label("Apple Health connected", systemImage: "checkmark.circle.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                } else if app.health.isAvailable {
+                    Button("Connect Apple Health") {
+                        Task {
+                            do {
+                                try await app.health.requestAccess()
+                                app.setHealthConnected(true, userID: userID)
+                                healthState = "connected"
+                            } catch {
+                                healthState = "Couldn't connect: \(error.localizedDescription)"
+                            }
+                        }
+                    }
+                    .buttonStyle(.secondaryPill)
+                    .padding(.top, 4)
+                    if let healthState, healthState != "connected" {
+                        Text(healthState).font(Theme.Font.caption).foregroundStyle(Theme.Color.redFlag)
+                    }
+                }
             }
             if let error {
                 Text(error).font(Theme.Font.caption).foregroundStyle(Theme.Color.redFlag)

@@ -14,6 +14,9 @@ struct DoctorReportData {
     var silhouettes: [BodyProjection.View: [SIMD2<Float>]]
     var anchors: [String: Vec3]
     var arcs: [FlowArc]
+    /// Last-14-day averages per metric (empty when no health app is connected).
+    var healthAverages: [(kind: HealthMetricKind, value: Double)] = []
+    var healthSource: String?
     var generatedAt = Date()
 
     var dateRange: String {
@@ -131,7 +134,12 @@ private struct SummaryPage: View {
             }
             .foregroundStyle(Theme.Color.secondaryText)
 
-            Text("Health apps: none connected yet.").font(.system(size: 10)).foregroundStyle(Theme.Color.secondaryText)
+            if let source = data.healthSource, !data.healthAverages.isEmpty {
+                Text("\(source), 14-day averages: " + data.healthAverages.map { "\($0.kind.label) \($0.kind.format($0.value))" }.joined(separator: " · "))
+                    .font(.system(size: 10))
+            } else {
+                Text("Health apps: none connected.").font(.system(size: 10)).foregroundStyle(Theme.Color.secondaryText)
+            }
         }
     }
 
@@ -162,6 +170,9 @@ private struct EpisodesPage: View {
                     Text(path(ep)).font(.system(size: 10))
                     if let insight = data.insights[ep.id] {
                         Text(insight.summary).font(.system(size: 10.5))
+                        ForEach(insight.healthContext.prefix(2), id: \.metric) { item in
+                            Text("\(item.metric): \(item.summary)").font(.system(size: 10)).foregroundStyle(Theme.Color.secondaryText)
+                        }
                         if !insight.factors.isEmpty {
                             Text("Often linked to: " + insight.factors.map(\.title).joined(separator: "; ")).font(.system(size: 10))
                         }

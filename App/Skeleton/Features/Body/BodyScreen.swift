@@ -18,7 +18,9 @@ struct BodyScreen: View {
     init(app: AppModel, profile: Profile) {
         self.profile = profile
         _model = State(initialValue: BodyViewModel(data: app.data, pain: app.pain, insights: app.insights,
-                                                   parser: app.parser, profile: profile))
+                                                   parser: app.parser, health: app.health,
+                                                   healthConnected: app.isHealthConnected(profile.userID),
+                                                   profile: profile))
     }
 
     var body: some View {
@@ -35,6 +37,7 @@ struct BodyScreen: View {
             async let bodyLoad: Void = model.load(morph: profile.morph)
             async let historyLoad: Void = model.loadEntries()
             _ = await (bodyLoad, historyLoad)
+            await model.loadHealth()
         }
         .sheet(isPresented: $showGallery) { DesignGalleryView(data: app.data) }
         .sheet(isPresented: Binding(get: { reportURL != nil }, set: { if !$0 { reportURL = nil } })) {
@@ -98,6 +101,18 @@ struct BodyScreen: View {
                     Button("Doctor report", systemImage: "doc.text") { makeReport() }
                 }
                 Button("Edit profile", systemImage: "person.crop.circle") { showProfile = true }
+                if model.healthConnected {
+                    Button("Disconnect \(model.health.sourceName)", systemImage: "heart.slash") {
+                        model.disconnectHealth()
+                        app.setHealthConnected(false, userID: profile.userID)
+                    }
+                } else if model.health.isAvailable {
+                    Button("Connect Apple Health", systemImage: "heart.text.square") {
+                        Task {
+                            if await model.connectHealth() { app.setHealthConnected(true, userID: profile.userID) }
+                        }
+                    }
+                }
                 Button("Design system", systemImage: "square.grid.2x2") { showGallery = true }
                 Button("Reset view", systemImage: "arrow.counterclockwise") { model.resetCamera() }
                 Button("Sign out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {

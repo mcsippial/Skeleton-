@@ -17,6 +17,8 @@ final class AppModel {
     let parser: any TextPainParser
     /// Shareable report links (live mode only; demo mode shares the file itself).
     let reportLinks: (any ReportLinkService)?
+    /// Apple Health in live mode; demo health data in demo mode.
+    let health: any HealthService
     let data: SkeletonData
 
     private(set) var user: AppUser?
@@ -46,6 +48,7 @@ final class AppModel {
             insights = EdgeInsightProvider(client: client, atlas: data.atlas)
             parser = EdgeTextPainParser(client: client, atlas: data.atlas, fallback: MockTextPainParser(atlas: data.atlas))
             reportLinks = SupabaseReportLinkService(client: client)
+            health = HealthKitService()
         } else {
             reportLinks = nil
             auth = MockAuthService()
@@ -53,11 +56,15 @@ final class AppModel {
             profiles = MockProfileRepository()
             insights = MockInsightProvider()
             parser = MockTextPainParser(atlas: data.atlas)
+            let repo = pain
+            health = MockHealthService(entries: { (try? await repo.entries()) ?? [] })
         }
         #else
         reportLinks = nil
         auth = MockAuthService()
-        pain = MockPainRepository()
+        let repo = MockPainRepository()
+        pain = repo
+        health = MockHealthService(entries: { (try? await repo.entries()) ?? [] })
         profiles = MockProfileRepository()
         insights = MockInsightProvider()
         parser = MockTextPainParser(atlas: data.atlas)
@@ -65,6 +72,15 @@ final class AppModel {
     }
 
     var isDemoMode: Bool { config.serviceMode == .mock }
+
+    /// Whether this user turned on the health connection (always on for demo data).
+    func isHealthConnected(_ userID: UUID) -> Bool {
+        isDemoMode || UserDefaults.standard.bool(forKey: "health.connected.\(userID.uuidString)")
+    }
+
+    func setHealthConnected(_ on: Bool, userID: UUID) {
+        UserDefaults.standard.set(on, forKey: "health.connected.\(userID.uuidString)")
+    }
 
     func restore() async {
         user = await auth.restoreSession()

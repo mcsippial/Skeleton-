@@ -32,6 +32,8 @@ public struct InsightRequest: Sendable {
     public var redFlags: [RedFlagMatch]
     public var rules: RulesOutput
     public var demographics: Demographics?
+    /// Sleep, HRV, activity and weight around the episode (empty when no health app is connected).
+    public var healthContext: [HealthContextItem] = []
 }
 
 /// Structured JSON the AI must return.
@@ -106,6 +108,9 @@ public struct MockInsightProvider: InsightProvider {
         if !triggers.isEmpty {
             patterns.append("You noted it gets worse with: \(triggers.joined(separator: ", ").lowercased()).")
         }
+        for item in request.healthContext.prefix(2) {
+            patterns.append("\(item.metric): \(item.summary)")
+        }
         return AIInsightOutput(
             summary: request.pathways.first?.plainExplanation ?? "These pains appeared close together in connected areas.",
             factors: factors,
@@ -131,6 +136,7 @@ public struct Insight: Sendable, Hashable {
     public var doctorQuestions: [String]
     public var specialist: String?
     public var rules: RulesOutput
+    public var healthContext: [HealthContextItem] = []
     public var modelVersion: String
     /// How many AI items the rules removed (shown in debug, logged for review).
     public var droppedCount: Int
@@ -215,6 +221,7 @@ public struct InsightValidator: Sendable {
                        doctorQuestions: keep(output.doctorQuestions, allowDiagnosisWord: true),
                        specialist: specialist,
                        rules: request.rules,
+                       healthContext: request.healthContext,
                        modelVersion: modelVersion,
                        droppedCount: dropped)
     }
@@ -230,7 +237,8 @@ public struct InsightEngine: Sendable {
         self.provider = provider
     }
 
-    public func request(for episode: Episode, entries all: [PainEntry], demographics: Demographics? = nil) -> InsightRequest {
+    public func request(for episode: Episode, entries all: [PainEntry], demographics: Demographics? = nil,
+                        metrics: [DailyMetric] = []) -> InsightRequest {
         let ids = Set(episode.entryIDs)
         let entries = all.filter { ids.contains($0.id) }.sorted { $0.onsetAt < $1.onsetAt }
         let matcher = PathwayMatcher(library: data.pathways, atlas: data.atlas)
@@ -244,11 +252,13 @@ public struct InsightEngine: Sendable {
         let rules = RulesOutput(pathwayIDs: pathways.map(\.id), redFlagIDs: flags.map(\.id),
                                 contributors: contributors, specialists: pathways.map(\.specialist))
         return InsightRequest(episode: episode, entries: entries, pathways: pathways, redFlags: flags,
-                              rules: rules, demographics: demographics)
+                              rules: rules, demographics: demographics,
+                              healthContext: HealthSummary.context(for: entries, metrics: metrics))
     }
 
-    public func insight(for episode: Episode, entries: [PainEntry], demographics: Demographics? = nil) async throws -> Insight {
-        let req = request(for: episode, entries: entries, demographics: demographics)
+    public func insight(for episode: Episode, entries: [PainEntry], demographics: Demographics? = nil,
+                        metrics: [DailyMetric] = []) async throws -> Insight {
+        let req = request(for: episode, entries: entries, demographics: demographics, metrics: metrics)
         let result = try await provider.insight(for: req)
         return InsightValidator().validate(result.output, request: req, modelVersion: result.model)
     }

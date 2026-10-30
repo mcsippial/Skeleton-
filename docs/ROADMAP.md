@@ -44,9 +44,11 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [x] Insights saved per episode (reused until the episode changes) + per-user daily AI limits (`AI_DAILY_LIMIT_PARSE` 60, `AI_DAILY_LIMIT_INSIGHT` 25)
 
 ## Phase 3 — Health integrations
+- [x] Apple Health directly (HealthKit, read-only): sleep, HRV, resting HR, steps, workouts, weight; demo data in demo mode
+- [x] Metrics on the timeline; fed to the cause engine (`HealthSummary`: before-onset vs usual), shown on the insight card and report
 - [ ] Decide Terra vs. Junction
-- [ ] HealthKit directly + aggregator SDK (Oura, WHOOP, Garmin, Fitbit)
-- [ ] Metrics on the timeline; fed to the cause engine
+- [ ] Aggregator SDK for Oura, WHOOP, Garmin, Fitbit behind `HealthService`
+- [ ] Sync daily metrics to `health_metrics` and record the connection in `integrations`
 
 ## Phase 4 — The real body
 - [ ] in3D scan → GLB upload → USDZ conversion → rig check → atlas fit → set current model (Meshy fallback; optional Bodygram)

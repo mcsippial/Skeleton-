@@ -36,8 +36,11 @@ targets:
       - path: data
         type: folder
         buildPhase: resources
+    entitlements:
+      path: App/Skeleton/Skeleton.entitlements
     dependencies:
       - package: SkeletonCore
+      - sdk: HealthKit.framework
       - package: Supabase
         product: Supabase
     info:
@@ -51,6 +54,8 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         ITSAppUsesNonExemptEncryption: false
         NSMicrophoneUsageDescription: Skeleton listens while you describe your pain, so you don't have to type.
+        NSHealthShareUsageDescription: Skeleton reads sleep, heart rate variability, resting heart rate, steps, workouts and weight to show them next to your pain and help explain what may be driving it. It never writes to Health.
+        NSHealthUpdateUsageDescription: Skeleton does not write to Apple Health.
         NSSpeechRecognitionUsageDescription: Your words are turned into text on this iPhone so Skeleton can place the pain on your body. Audio never leaves your device.
         SKSupabaseURL: $(SUPABASE_URL)
         SKSupabaseAnonKey: $(SUPABASE_ANON_KEY)

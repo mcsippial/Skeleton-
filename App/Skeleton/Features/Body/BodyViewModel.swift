@@ -8,6 +8,7 @@ final class BodyViewModel {
     let pain: any PainRepository
     let insights: any InsightProvider
     let parser: any TextPainParser
+    let health: any HealthService
     let userID: UUID
     let demographics: Demographics
 
@@ -45,16 +46,64 @@ final class BodyViewModel {
     private var flashTask: Task<Void, Never>?
 
     init(data: SkeletonData, pain: any PainRepository, insights: any InsightProvider,
-         parser: any TextPainParser, profile: Profile) {
+         parser: any TextPainParser, health: any HealthService, healthConnected: Bool, profile: Profile) {
         self.data = data
         self.pain = pain
         self.insights = insights
         self.parser = parser
+        self.health = health
+        self.healthConnected = healthConnected
         self.userID = profile.userID
         self.demographics = profile.demographics
     }
 
     private var matcher: PathwayMatcher { PathwayMatcher(library: data.pathways, atlas: data.atlas) }
+
+    // MARK: Health
+
+    private(set) var healthConnected: Bool
+    /// Daily metrics covering the timeline (plus a baseline before it).
+    private(set) var metrics: [DailyMetric] = []
+    private(set) var healthError: String?
+
+    func loadHealth() async {
+        guard healthConnected else { metrics = []; return }
+        do {
+            let start = timelineRange.lowerBound.addingTimeInterval(-30 * 86_400)
+            metrics = try await health.dailyMetrics(from: start, to: Date())
+            healthError = nil
+        } catch {
+            healthError = "Couldn't read \(health.sourceName). \(error.localizedDescription)"
+        }
+    }
+
+    /// Asks for read access; returns whether the connection is now on.
+    func connectHealth() async -> Bool {
+        do {
+            try await health.requestAccess()
+            healthConnected = true
+            insightCache = [:]
+            await loadHealth()
+            return true
+        } catch {
+            healthError = "Couldn't connect \(health.sourceName). \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    func disconnectHealth() {
+        healthConnected = false
+        metrics = []
+        insightCache = [:]
+    }
+
+    /// Metric values on the timeline date, with the usual value for comparison.
+    var metricsOnDisplayDate: [(kind: HealthMetricKind, value: Double, usual: Double?)] {
+        [HealthMetricKind.sleepHours, .hrv, .restingHeartRate, .steps].compactMap { kind in
+            guard let v = HealthSummary.value(kind, on: displayDate, in: metrics) else { return nil }
+            return (kind, v, HealthSummary.usual(kind, before: displayDate, in: metrics))
+        }
+    }
 
     // MARK: Timeline
 
@@ -158,16 +207,17 @@ final class BodyViewModel {
         let engine = InsightEngine(data: data, provider: insights)
         let all = entries
         let demographics = self.demographics
+        let metrics = self.metrics
         Task {
             defer { isLoadingInsight = false }
             do {
-                let result = try await engine.insight(for: episode, entries: all, demographics: demographics)
+                let result = try await engine.insight(for: episode, entries: all, demographics: demographics, metrics: metrics)
                 insightCache[episode.id] = result
                 if selectedEpisode?.id == episode.id { insight = result }
             } catch {
                 // The AI step failed (offline, declined, unavailable): show what the rules know on their own.
                 let rulesOnly = InsightEngine(data: data, provider: MockInsightProvider())
-                if var fallback = try? await rulesOnly.insight(for: episode, entries: all, demographics: demographics) {
+                if var fallback = try? await rulesOnly.insight(for: episode, entries: all, demographics: demographics, metrics: metrics) {
                     fallback.modelVersion = "rules-only"
                     insightCache[episode.id] = fallback
                     if selectedEpisode?.id == episode.id { insight = fallback }
@@ -192,8 +242,18 @@ final class BodyViewModel {
             redFlags: activeRedFlags, pathways: data.pathways, atlas: data.atlas,
             silhouettes: silhouettes, anchors: anchors,
             arcs: EpisodeBuilder.arcs(entries, matcher: matcher).filter { now.timeIntervalSince($0.appearsAt) <= window },
+            healthAverages: healthAverages(days: 14, now: now),
+            healthSource: healthConnected ? health.sourceName : nil,
             generatedAt: now)
         return try DoctorReportRenderer.render(report)
+    }
+
+    private func healthAverages(days: Int, now: Date) -> [(kind: HealthMetricKind, value: Double)] {
+        let from = Calendar.current.startOfDay(for: now.addingTimeInterval(-Double(days) * 86_400))
+        return HealthMetricKind.allCases.compactMap { kind in
+            let vals = metrics.filter { $0.kind == kind && $0.day >= from }.map(\.value)
+            return vals.isEmpty ? nil : (kind, vals.reduce(0, +) / Double(vals.count))
+        }
     }
 
     func closeEpisode() {

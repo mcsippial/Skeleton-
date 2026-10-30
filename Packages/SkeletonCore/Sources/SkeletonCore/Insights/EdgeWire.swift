@@ -66,7 +66,9 @@ public enum EdgeWire {
             demographics = r.demographics.map {
                 Demographics(age: $0.age, sex: $0.sex.rawValue, height_cm: $0.heightCm, weight_kg: $0.weightKg, activity_level: $0.activityLevel)
             }
-            health_context = nil
+            health_context = r.healthContext.isEmpty ? nil : r.healthContext.prefix(30).map {
+                HealthContext(metric: String($0.metric.prefix(300)), summary: String($0.summary.prefix(300)))
+            }
         }
     }
 

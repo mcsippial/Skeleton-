@@ -93,6 +93,20 @@ struct InsightCard: View {
                 section("In your data")
                 bullets(i.patterns)
             }
+            if !i.healthContext.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("FROM YOUR HEALTH APPS").font(Theme.Font.label).tracking(1.1).foregroundStyle(Theme.Color.secondaryText)
+                    ForEach(i.healthContext.prefix(3), id: \.metric) { item in
+                        (Text(item.metric).bold() + Text(" · " + item.summary))
+                            .font(.system(size: 12.5))
+                            .foregroundStyle(Color(hex: 0x2A2A2E))
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.black.opacity(0.035)))
+                .padding(.top, 6)
+            }
             if !i.selfCare.isEmpty {
                 section("Things to try")
                 bullets(i.selfCare)
