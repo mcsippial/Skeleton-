@@ -38,7 +38,8 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [x] App calls the functions in live mode; on-device rules run before (matching, red flags) and after (`InsightValidator`); offline/declined → rules-only insight, local parser
 - [x] Voice input (on-device Speech framework; audio never leaves the phone)
 - [x] Doctor report export (PDF: patient summary, red flags, front/back body maps with spots and pathway lines, episodes, full log; share/print)
-- [ ] Connect a Supabase project + Anthropic key and verify end-to-end (steps in `docs/BACKEND.md`)
+- [x] Supabase project `otintmfebdkxkrqgryut` (us-east-1): migrations applied, RLS verified, `parse-pain` + `cause-engine` deployed (mock AI until the key is set)
+- [ ] Add `ANTHROPIC_API_KEY` + `AI_PROVIDER=claude` as Edge Function secrets, then verify from the app in live mode
 - [ ] Shareable report link (upload PDF to private Storage, short-lived signed URL)
 - [ ] Rate limiting per user on the AI functions
 

@@ -6,8 +6,10 @@
 //
 // With no values set the app runs end-to-end on mock services.
 
-SUPABASE_URL =
-SUPABASE_ANON_KEY =
+// The Skeleton Supabase project. Both values are public by design (Row Level Security protects the data).
+// xcconfig treats "//" as a comment, hence "$()" between the slashes.
+SUPABASE_URL = https:/$()/otintmfebdkxkrqgryut.supabase.co
+SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90aW50bWZlYmRreGtycWdyeXV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzOTgzMzYsImV4cCI6MjEwODk3NDMzNn0.dW54sgD5LgHekDIe5a9AxTJR1VRUXjcnBUbmyPCi0gg
 // mock | live. The SKELETON_SERVICES scheme environment variable overrides this at run time.
 SKELETON_SERVICES = mock
 
