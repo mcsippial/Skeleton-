@@ -9,6 +9,7 @@ struct BodyScreen: View {
     @State private var showGallery = false
     @State private var panelContentHeight: CGFloat = 0
     @State private var panelExpanded = false
+    @AppStorage("bodyHintSeen") private var hintSeen = false
 
     @State private var showProfile = false
     @State private var reportURL: URL?
@@ -24,15 +25,38 @@ struct BodyScreen: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            header
-            layerChips
-            stage
-            TimelineBar(model: model)
-                .padding(.horizontal, 18)
-                .padding(.bottom, 10)
-            panel
+        ZStack {
+            stage.ignoresSafeArea()
+            VStack(spacing: 0) {
+                header
+                if let tip = model.tooltip {
+                    GlassTooltip(title: tip.title, subtitle: tip.subtitle)
+                        .padding(.horizontal, 40)
+                        .padding(.top, 6)
+                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                }
+                HStack(alignment: .center) {
+                    LayerRail(visible: model.visibleLayers) { model.toggle($0) }
+                    Spacer()
+                    XRaySlider(value: Bindable(model).skinOpacity)
+                }
+                .padding(.horizontal, 12)
+                .frame(maxHeight: .infinity)
+                if model.isPickingSpots {
+                    pickingBanner
+                } else if !hintSeen && model.tooltip == nil {
+                    Text("Drag to rotate · pinch to zoom · tap to log")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Theme.Color.secondaryText)
+                        .padding(.bottom, 8)
+                        .transition(.opacity)
+                }
+                panel
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: model.tooltip?.title)
+        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: model.isPickingSpots)
+        .onChange(of: model.tooltip?.title) { _, title in if title != nil { hintSeen = true } }
         .task {
             async let bodyLoad: Void = model.load(morph: profile.morph)
             async let historyLoad: Void = model.loadEntries()
@@ -76,26 +100,25 @@ struct BodyScreen: View {
     // MARK: Header
 
     private var header: some View {
-        HStack {
-            Text("Skeleton").font(.system(size: 22, weight: .bold)).tracking(-0.4)
-            if app.isDemoMode {
-                Text("DEMO")
-                    .font(.system(size: 10, weight: .bold)).tracking(1)
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 8) {
+                    Text("Skeleton").font(.system(size: 24, weight: .bold)).tracking(-0.6)
+                    if app.isDemoMode {
+                        Text("DEMO")
+                            .font(.system(size: 9, weight: .bold)).tracking(1)
+                            .foregroundStyle(Theme.Color.secondaryText)
+                            .padding(.horizontal, 7).padding(.vertical, 3)
+                            .background(Capsule().fill(Theme.Color.track))
+                            .accessibilityLabel("Demo mode, not synced")
+                    }
+                }
+                Text(greeting)
+                    .font(.system(size: 13))
                     .foregroundStyle(Theme.Color.secondaryText)
-                    .padding(.horizontal, 8).padding(.vertical, 4)
-                    .background(Capsule().fill(Theme.Color.track))
-                    .accessibilityLabel("Demo mode, not synced")
             }
             Spacer()
-            Button { model.isDescribeSheetPresented = true } label: {
-                Label("Describe", systemImage: "text.bubble")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Theme.Color.text)
-                    .padding(.horizontal, 12)
-                    .frame(height: 36)
-                    .glass(Capsule())
-            }
-            .buttonStyle(.plain)
+            CircleIconButton(systemImage: "mic.fill", label: "Describe your pain") { model.isDescribeSheetPresented = true }
             Menu {
                 Section(app.isDemoMode ? "Demo mode: data stays on this device" : "Signed in · synced with Supabase") {
                     Button("Doctor report", systemImage: "doc.text") { makeReport() }
@@ -120,85 +143,37 @@ struct BodyScreen: View {
                 }
             } label: {
                 Image(systemName: "ellipsis")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(Theme.Color.text)
-                    .frame(width: 36, height: 36)
-                    .glass(Circle())
+                    .frame(width: 40, height: 40)
+                    .glass(Circle(), tint: 0.55)
             }
             .accessibilityLabel("More")
         }
-        .padding(.horizontal, 18)
-        .padding(.top, 8)
+        .padding(.horizontal, 20)
+        .padding(.top, 4)
     }
 
-    private var layerChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 7) {
-                ForEach(AnatomyLayer.allCases) { layer in
-                    GlassChip(title: layer.title, isOn: model.visibleLayers.contains(layer)) {
-                        model.toggle(layer)
-                    } leading: {
-                        layerDot(layer)
-                    }
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-        }
-    }
-
-    @ViewBuilder private func layerDot(_ layer: AnatomyLayer) -> some View {
-        switch layer {
-        case .skin: LayerDot(fill: LinearGradient(colors: [Color(hex: 0xFF9EE5), Color(hex: 0x7FD6FF), Color(hex: 0x9FF0B8)],
-                                                  startPoint: .topLeading, endPoint: .bottomTrailing))
-        case .muscles: LayerDot(fill: Theme.Color.muscles)
-        case .tendons: LayerDot(fill: Theme.Color.tendons)
-        case .nerves: LayerDot(fill: Theme.Color.nerves)
-        case .bones: LayerDot(fill: Theme.Color.bones)
-        }
+    private var greeting: String {
+        let name = profile.displayName.map { ", \($0)" } ?? ""
+        let spots = model.spots.count
+        if spots == 0 { return "Hi\(name). Tap your body to log pain." }
+        return "Hi\(name). \(spots) \(spots == 1 ? "area" : "areas") with pain in the last two weeks."
     }
 
     // MARK: Stage
 
     private var stage: some View {
         ZStack {
+            GlowBackground()
             if let body3D = model.stockBody {
                 BodyRealityView(model: model, body3D: body3D)
                     .transition(.opacity)
             } else {
-                ProgressView("Loading body…")
-                    .font(Theme.Font.callout)
-                    .foregroundStyle(Theme.Color.secondaryText)
+                ProgressView()
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .overlay(alignment: .bottom) {
-            if model.isPickingSpots { pickingBanner }
-        }
-        .overlay(alignment: .top) {
-            if let tip = model.tooltip {
-                GlassTooltip(title: tip.title, subtitle: tip.subtitle)
-                    .padding(.horizontal, 28)
-                    .padding(.top, 8)
-                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
-            }
-        }
-        .overlay(alignment: .trailing) {
-            XRaySlider(value: Bindable(model).skinOpacity)
-                .padding(.trailing, 12)
-        }
-        .overlay(alignment: .bottomLeading) {
-            Text("Drag to rotate · pinch to zoom · tap anything")
-                .font(.system(size: 11))
-                .foregroundStyle(Theme.Color.secondaryText)
-                .padding(.leading, 14)
-                .padding(.bottom, 10)
-        }
-        .animation(.easeInOut(duration: 0.2), value: model.tooltip?.title)
-        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: model.isPickingSpots)
     }
-
-    // MARK: Bottom sheet
 
     private var pickingBanner: some View {
         HStack(spacing: 12) {
@@ -238,36 +213,40 @@ struct BodyScreen: View {
         return model.spots.isEmpty ? "Tap the body to log pain" : "Tap a glowing spot for its history"
     }
 
-    /// Collapsible drawer: a single line by default so the body stays the hero; red flags always visible.
+    /// Bottom sheet: timeline, today's health numbers, then a collapsible detail area.
+    /// Collapsed by default so the body stays the hero; red flags are always visible.
     private var panel: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+        VStack(alignment: .leading, spacing: 10) {
+            Capsule().fill(Theme.Color.secondaryText.opacity(0.3)).frame(width: 36, height: 5)
+                .frame(maxWidth: .infinity)
+                .padding(.top, 2)
+
+            TimelineScrubber(model: model)
+            if !model.metricsOnDisplayDate.isEmpty {
+                MetricStrip(values: model.metricsOnDisplayDate)
+            }
+
+            Divider().opacity(0.5)
+
             Button {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { panelExpanded.toggle() }
             } label: {
-                VStack(spacing: 8) {
-                    Capsule().fill(Theme.Color.secondaryText.opacity(0.35)).frame(width: 36, height: 5)
-                    HStack {
-                        Text(panelSummary)
-                            .font(.system(size: 14, weight: .semibold))
-                            .lineLimit(1)
-                        Spacer()
-                        Image(systemName: panelExpanded ? "chevron.down" : "chevron.up")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(Theme.Color.secondaryText)
-                    }
+                HStack(spacing: 8) {
+                    Text(panelSummary)
+                        .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(1)
+                    Spacer()
+                    Image(systemName: "chevron.up")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Theme.Color.secondaryText)
+                        .rotationEffect(.degrees(panelExpanded ? 180 : 0))
                 }
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(panelExpanded ? "Collapse details" : "Show details: \(panelSummary)")
-            .gesture(DragGesture(minimumDistance: 12).onEnded { g in
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
-                    if g.translation.height < -20 { panelExpanded = true }
-                    if g.translation.height > 20 { panelExpanded = false }
-                }
-            })
 
-            // Red flags are always shown first and are never softened, even with the drawer closed.
+            // Red flags are always shown first and are never softened, even with the sheet closed.
             if !panelExpanded {
                 ForEach(model.activeRedFlags) { flag in
                     Button {
@@ -285,15 +264,13 @@ struct BodyScreen: View {
             }
 
             if panelExpanded {
-                PillSegmentedControl(options: ViewPreset.allCases.map { (value: $0, title: $0.title) },
-                                     selection: Binding(get: { model.preset }, set: { model.select($0) }))
                 ScrollView {
                     VStack(alignment: .leading, spacing: Theme.Spacing.m) {
                         ForEach(model.activeRedFlags) { flag in
                             RedFlagCard(headline: flag.headline, title: flag.title, message: flag.message,
                                         isEmergency: flag.urgency == .emergency)
                         }
-                        if let error = model.loadError {
+                        if let error = model.loadError ?? model.healthError {
                             Text(error).font(Theme.Font.caption).foregroundStyle(Theme.Color.redFlag)
                         }
                         if let s = model.selection {
@@ -304,37 +281,48 @@ struct BodyScreen: View {
                             InsightCard(model: model, episode: episode)
                         } else {
                             EpisodesCard(model: model)
-                            GlassCard(label: "Your body") {
-                                Text(model.spots.isEmpty
-                                     ? "Tap any spot to identify it, then log pain there. Or tap Describe and say where it hurts."
-                                     : "Glowing spots are pain from the last two weeks. Tap one for its history, or tap anywhere to log new pain.")
-                                    .font(Theme.Font.callout)
-                                    .foregroundStyle(Color(hex: 0x2A2A2E))
-                            }
+                            PillSegmentedControl(options: ViewPreset.allCases.map { (value: $0, title: $0.title) },
+                                                 selection: Binding(get: { model.preset }, set: { model.select($0) }))
                         }
                         Text("Stock body fitted to your height and build. The inner layers are reference anatomy, not your own internal structures. Not medical advice.")
                             .font(.system(size: 11))
                             .foregroundStyle(Theme.Color.secondaryText)
                     }
+                    .padding(.bottom, 4)
                     .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { panelContentHeight = $0 }
                 }
                 .scrollBounceBehavior(.basedOnSize)
-                .frame(height: min(panelContentHeight, 250))
+                .frame(height: min(panelContentHeight, 300))
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, 18)
         .padding(.top, 8)
-        .padding(.bottom, 12)
-        .glass(UnevenRoundedRectangle(topLeadingRadius: Theme.Radius.large, topTrailingRadius: Theme.Radius.large, style: .continuous),
-               rainbow: true, tint: 0.72)
+        .padding(.bottom, 6)
+        .background {
+            UnevenRoundedRectangle(topLeadingRadius: 30, topTrailingRadius: 30, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(UnevenRoundedRectangle(topLeadingRadius: 30, topTrailingRadius: 30, style: .continuous).fill(Color.white.opacity(0.55)))
+                .overlay(UnevenRoundedRectangle(topLeadingRadius: 30, topTrailingRadius: 30, style: .continuous)
+                    .strokeBorder(LinearGradient(colors: [.white, .white.opacity(0)], startPoint: .top, endPoint: .center), lineWidth: 1))
+                .overlay(RainbowBorder(shape: UnevenRoundedRectangle(topLeadingRadius: 30, topTrailingRadius: 30, style: .continuous),
+                                       lineWidth: 1.2, opacity: 0.5, period: 9))
+                .shadow(color: .black.opacity(0.08), radius: 20, y: -4)
+                .ignoresSafeArea(edges: .bottom)
+        }
+        .gesture(DragGesture(minimumDistance: 16).onEnded { g in
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
+                if g.translation.height < -24 { panelExpanded = true }
+                if g.translation.height > 24 { panelExpanded = false }
+            }
+        })
         .onChange(of: panelFocus) { _, focus in
             withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { panelExpanded = !focus.isEmpty }
         }
     }
 
     private func selectionCard(_ s: BodyTapResult) -> some View {
-        GlassCard(label: s.layer.category, rainbow: true) {
+        GlassCard(label: s.layer.category) {
             Text(s.structureName)
                 .font(.system(size: 17, weight: .semibold))
                 .tracking(-0.2)
@@ -368,7 +356,7 @@ struct BodyScreen: View {
 
     private func historyCard(_ region: String) -> some View {
         let list = model.entries(inRegion: region)
-        return GlassCard(label: "History · \(list.count) \(list.count == 1 ? "entry" : "entries")", rainbow: true) {
+        return GlassCard(label: "History · \(list.count) \(list.count == 1 ? "entry" : "entries")") {
             Text(model.regionName(region))
                 .font(.system(size: 17, weight: .semibold))
                 .tracking(-0.2)

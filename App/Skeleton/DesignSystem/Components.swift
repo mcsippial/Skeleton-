@@ -132,21 +132,47 @@ struct PillSegmentedControl<Value: Hashable>: View {
     }
 }
 
-/// Frosted card with a section label, used for insights and info. Rainbow when it is the focus.
+/// Card for content inside glass surfaces: clean white (glass on glass reads muddy), hairline
+/// edge, soft shadow. Rainbow border only when it is the focus (the insight card).
 struct GlassCard<Content: View>: View {
     var label: String?
     var rainbow: Bool = false
     @ViewBuilder var content: Content
 
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 20, style: .continuous)
         VStack(alignment: .leading, spacing: 6) {
             if let label { SectionLabel(label) }
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 15)
-        .padding(.vertical, 14)
-        .glass(cornerRadius: Theme.Radius.medium, rainbow: rainbow, tint: 0.7)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 15)
+        .background(shape.fill(Color.white.opacity(0.82)))
+        .overlay(shape.strokeBorder(Color.black.opacity(0.05), lineWidth: 0.5))
+        .overlay { if rainbow { RainbowBorder(shape: shape, lineWidth: 1.2, opacity: 0.6) } }
+        .shadow(color: .black.opacity(0.05), radius: 12, y: 5)
+    }
+}
+
+/// Round glass icon button for toolbars.
+struct CircleIconButton: View {
+    let systemImage: String
+    let label: String
+    var prominent = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(prominent ? .white : Theme.Color.text)
+                .frame(width: 40, height: 40)
+                .background { if prominent { Circle().fill(Theme.Color.text) } }
+                .glass(Circle(), tint: prominent ? 0 : 0.55)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 }
 
@@ -233,7 +259,7 @@ struct XRaySlider: View {
         .foregroundStyle(Theme.Color.secondaryText)
         .padding(.vertical, 12)
         .padding(.horizontal, 6)
-        .glass(Capsule(), rainbow: false)
+        .glass(Capsule(), tint: 0.45)
         .accessibilityElement()
         .accessibilityLabel("Skin opacity")
         .accessibilityValue("\(Int(value * 100)) percent")

@@ -180,7 +180,7 @@ struct OnboardingView: View {
     private var ready: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.l) {
             Text("Your body is ready").titleStyle()
-            GlassCard(label: "Body", rainbow: true) {
+            GlassCard(label: "Body") {
                 Text("A stock body fitted to \(heightText) and \(weightText). The layers inside are reference anatomy, not your own internal structures.")
                     .font(Theme.Font.callout)
                 Text("Scanning yourself into a realistic model is coming soon.")
