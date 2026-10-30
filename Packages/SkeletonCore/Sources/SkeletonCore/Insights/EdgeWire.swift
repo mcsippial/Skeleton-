@@ -73,6 +73,8 @@ public enum EdgeWire {
     public struct CauseEngineResponse: Decodable, Sendable {
         public let insight: AIInsightOutput
         public let model: String
+        /// True when the server reused a saved insight for unchanged episode content.
+        public let cached: Bool?
     }
 
     // MARK: parse-pain

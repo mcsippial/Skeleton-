@@ -41,7 +41,7 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [x] Supabase project `otintmfebdkxkrqgryut` (us-east-1): migrations applied, RLS verified, `parse-pain` + `cause-engine` deployed (mock AI until the key is set)
 - [ ] Add `ANTHROPIC_API_KEY` + `AI_PROVIDER=claude` as Edge Function secrets, then verify from the app in live mode
 - [ ] Shareable report link (upload PDF to private Storage, short-lived signed URL)
-- [ ] Rate limiting per user on the AI functions
+- [x] Insights saved per episode (reused until the episode changes) + per-user daily AI limits (`AI_DAILY_LIMIT_PARSE` 60, `AI_DAILY_LIMIT_INSIGHT` 25)
 
 ## Phase 3 — Health integrations
 - [ ] Decide Terra vs. Junction

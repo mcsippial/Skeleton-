@@ -1,9 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { ClaudeOutputError, ClaudeRefusalError } from "./claude.ts";
 import { corsHeaders, json } from "./cors.ts";
+import { DailyLimitError } from "./store.ts";
 
 /** Maps failures to responses the app can act on. Never echoes request content. */
 export function errorResponse(error: unknown): Response {
+  if (error instanceof DailyLimitError) return json({ error: "daily_limit" }, 429);
   if (error instanceof ClaudeRefusalError) return json({ error: "declined", category: error.category }, 422);
   if (error instanceof ClaudeOutputError) return json({ error: "bad_model_output" }, 502);
   if (error instanceof Anthropic.RateLimitError) return json({ error: "rate_limited" }, 429);
