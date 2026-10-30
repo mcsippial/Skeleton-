@@ -68,20 +68,47 @@ public struct RayHit: Sendable, Equatable {
 /// Brute-force mesh raycaster with a bounding-sphere prefilter per target.
 /// A full stock body is ~100k triangles; one tap costs a few milliseconds.
 public struct MeshHitTester: Sendable {
+    /// A run of triangles (indices into `mesh.indices`) with its own bounding sphere.
     struct Target: Sendable {
         let id: String
         let mesh: MeshData
+        let indices: [UInt32]
         let center: Vec3
         let radius: Float
     }
 
     private var targets: [Target] = []
 
+    /// Large meshes are split into chunks of this many triangles so a ray only tests nearby ones.
+    static let chunkSize = 1500
+
     public init() {}
 
     public mutating func add(id: String, mesh: MeshData) {
-        let s = mesh.boundingSphere
-        targets.append(Target(id: id, mesh: mesh, center: s.center, radius: s.radius))
+        let triCount = mesh.indices.count / 3
+        guard triCount > Self.chunkSize * 2 else {
+            let s = mesh.boundingSphere
+            targets.append(Target(id: id, mesh: mesh, indices: mesh.indices, center: s.center, radius: s.radius))
+            return
+        }
+        // Group triangles spatially: sort by a coarse (y, x, z) cell of their centroid.
+        let p = mesh.positions, idx = mesh.indices
+        func centroid(_ t: Int) -> Vec3 { (p[Int(idx[t * 3])] + p[Int(idx[t * 3 + 1])] + p[Int(idx[t * 3 + 2])]) / 3 }
+        func key(_ c: Vec3) -> (Int, Int, Int) { (Int((c.y / 0.08).rounded(.down)), Int((c.x / 0.08).rounded(.down)), Int((c.z / 0.08).rounded(.down))) }
+        let order = (0..<triCount).map { ($0, key(centroid($0))) }.sorted { $0.1 < $1.1 }.map(\.0)
+        var start = 0
+        while start < order.count {
+            let tris = order[start..<min(start + Self.chunkSize, order.count)]
+            var sub: [UInt32] = []
+            sub.reserveCapacity(tris.count * 3)
+            for t in tris { sub += [idx[t * 3], idx[t * 3 + 1], idx[t * 3 + 2]] }
+            let pts = sub.map { p[Int($0)] }
+            var lo = pts[0], hi = pts[0]
+            for q in pts { lo = Vec3(min(lo.x, q.x), min(lo.y, q.y), min(lo.z, q.z)); hi = Vec3(max(hi.x, q.x), max(hi.y, q.y), max(hi.z, q.z)) }
+            let c = (lo + hi) * 0.5
+            targets.append(Target(id: id, mesh: mesh, indices: sub, center: c, radius: pts.reduce(0) { max($0, $1.distance(to: c)) }))
+            start += Self.chunkSize
+        }
     }
 
     /// Nearest hit among targets accepted by `include`.
@@ -91,7 +118,7 @@ public struct MeshHitTester: Sendable {
             let inside = target.center.distance(to: ray.origin) <= target.radius
             guard let near = inside ? 0 : ray.intersectSphere(center: target.center, radius: target.radius),
                   near < (best?.distance ?? .infinity) else { continue }
-            let p = target.mesh.positions, idx = target.mesh.indices
+            let p = target.mesh.positions, idx = target.indices
             var i = 0
             while i + 2 < idx.count {
                 if let t = ray.intersectTriangle(p[Int(idx[i])], p[Int(idx[i + 1])], p[Int(idx[i + 2])]),

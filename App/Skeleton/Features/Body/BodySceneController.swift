@@ -55,6 +55,7 @@ final class BodySceneController {
 
         addLights(height: body.morph.heightScale)
         addFloorRing()
+        addGroundShadow()
         spotsRoot.name = "pain-spots"
         root.addChild(spotsRoot)
         arcsRoot.name = "flow-arcs"
@@ -291,6 +292,18 @@ final class BodySceneController {
             light.light.intensity = intensity
             light.look(at: target, from: position, relativeTo: nil)
             root.addChild(light)
+        }
+    }
+
+    /// Soft contact shadow: stacked translucent discs, darker towards the centre.
+    private func addGroundShadow() {
+        for (i, size) in [Float(0.62), 0.5, 0.4, 0.31, 0.23].enumerated() {
+            var m = UnlitMaterial(color: UIColor(hex: 0x0B0B0C))
+            m.blending = .transparent(opacity: .init(floatLiteral: 0.045))
+            let disc = ModelEntity(mesh: .generatePlane(width: size, depth: size * 0.62, cornerRadius: size * 0.31), materials: [m])
+            disc.position = SIMD3(0, 0.0008 + Float(i) * 0.0004, 0.01)
+            disc.name = "shadow"
+            root.addChild(disc)
         }
     }
 

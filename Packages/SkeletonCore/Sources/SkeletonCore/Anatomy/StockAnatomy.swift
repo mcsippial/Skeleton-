@@ -10,10 +10,16 @@ import Foundation
 /// This is placeholder anatomy, not medical-grade: Phase 1 allows Z-Anatomy for prototyping,
 /// and Phase 4 replaces it with licensed anatomy fitted to the user's rig.
 public enum StockAnatomy {
-    public static func build() -> [AnatomyStructure] {
+    /// - Parameter skin: the smooth sculpted skin (`data/stock-body-skin.bin`). Without it the
+    ///   body falls back to the preview's capsule skin (used by tests and as a safety net).
+    public static func build(skin: MeshData? = nil) -> [AnatomyStructure] {
         var b = Builder()
-        b.skin()
-        for s: Float in [1, -1] { b.sided(s) }
+        if let skin {
+            b.out.append(AnatomyStructure(id: "skin", name: "Skin", layer: .skin, info: "", mesh: skin))
+        } else {
+            b.skin()
+        }
+        for s: Float in [1, -1] { b.sided(s, capsuleSkin: skin == nil) }
         b.centre()
         return b.out
     }
@@ -56,18 +62,26 @@ public enum StockAnatomy {
             seg(.skin, V(0, 0.88, 0), V(0, 1.03, 0), 0.142, "Lower back, hips & pelvis", scale: V(1.05, 1, 0.68))
         }
 
-        mutating func sided(_ s: Float) {
+        mutating func sided(_ s: Float, capsuleSkin: Bool = true) {
             let sd = s == 1 ? "l" : "r"
             let side = s == 1 ? "Left" : "Right"
 
             // Skin
+            if capsuleSkin { capsuleSkinPieces(s, side) }
+            inner(s, sd, side)
+        }
+
+        mutating func capsuleSkinPieces(_ s: Float, _ side: String) {
             seg(.skin, V(s * 0.225, 1.35, 0), V(s * 0.27, 1.1, 0), 0.05, "\(side) upper arm")
             seg(.skin, V(s * 0.27, 1.1, 0), V(s * 0.3, 0.86, 0.02), 0.042, "\(side) forearm")
             ball(.skin, V(s * 0.305, 0.79, 0.025), 0.042, "\(side) hand", scale: V(0.6, 1.2, 0.9))
             seg(.skin, V(s * 0.095, 0.86, 0), V(s * 0.11, 0.5, 0), 0.078, "\(side) thigh")
             seg(.skin, V(s * 0.11, 0.5, 0), V(s * 0.11, 0.1, -0.01), 0.054, "\(side) lower leg")
             seg(.skin, V(s * 0.11, 0.04, -0.03), V(s * 0.11, 0.035, 0.12), 0.036, "\(side) foot")
+        }
 
+        /// Muscles, bones, tendons and nerves for one side.
+        mutating func inner(_ s: Float, _ sd: String, _ side: String) {
             // Muscles
             ball(.muscles, V(s * 0.085, 1.27, 0.07), 0.07, "\(side) pectoralis major", "pec_\(sd)", "Chest muscle", scale: V(1.2, 0.8, 0.42))
             ball(.muscles, V(s * 0.215, 1.34, 0), 0.058, "\(side) deltoid", "delt_\(sd)", "Shoulder muscle", scale: V(1, 1.25, 1))

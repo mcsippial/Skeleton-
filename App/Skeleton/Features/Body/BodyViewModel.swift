@@ -30,7 +30,7 @@ final class BodyViewModel {
     private(set) var stockBody: StockBody?
     var visibleLayers = Set(AnatomyLayer.allCases)
     /// 0 = skin invisible (full x-ray), 1 = solid skin.
-    var skinOpacity: Double = 0.3
+    var skinOpacity: Double = 0.5
     private(set) var selection: BodyTapResult?
     private(set) var tooltip: (title: String, subtitle: String)?
     private(set) var flashID: String?
@@ -265,15 +265,17 @@ final class BodyViewModel {
     /// Builds the stock body fitted to the user's proportions off the main thread.
     func load(morph: BodyMorph = .identity) async {
         guard stockBody == nil else { return }
-        let atlas = data.atlas
-        let body = await Task.detached(priority: .userInitiated) { StockBody(atlas: atlas, morph: morph) }.value
+        let atlas = data.atlas, skin = data.skin
+        let body = await Task.detached(priority: .userInitiated) { StockBody(atlas: atlas, morph: morph, skin: skin) }.value
         stockBody = body
         setCamera(OrbitCamera(target: Vec3(0, 0.88 * morph.heightScale, 0), yaw: 0.6, pitch: 0.08,
                               distance: 3.5 * morph.heightScale), animated: false)
     }
 
     var sceneState: BodySceneController.State {
-        .init(visibleLayers: visibleLayers, skinOpacity: Float(skinOpacity), flashID: flashID,
+        // With solid skin the inner layers can't be seen; hiding them avoids poke-through and saves work.
+        let solidSkin = skinOpacity >= 0.92 && visibleLayers.contains(.skin)
+        return .init(visibleLayers: solidSkin ? [.skin] : visibleLayers, skinOpacity: Float(skinOpacity), flashID: flashID,
               camera: camera, cameraRevision: cameraRevision, cameraAnimated: cameraAnimated,
               spots: spotRenders, arcs: arcRenders, glowIDs: glowingStructures)
     }

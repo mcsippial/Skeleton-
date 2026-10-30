@@ -20,9 +20,12 @@ public struct StockBody: Sendable {
     private let mapper: AtlasMapper
     private let byID: [String: AnatomyStructure]
 
-    public init(atlas: BodyAtlas, morph: BodyMorph = .identity) {
+    /// Pain-spot positions per region, snapped onto the skin (computed once).
+    private let spotAnchors: [String: Vec3]
+
+    public init(atlas: BodyAtlas, morph: BodyMorph = .identity, skin: MeshData? = nil) {
         self.morph = morph
-        let morphed = StockAnatomy.build().map {
+        let morphed = StockAnatomy.build(skin: skin).map {
             AnatomyStructure(id: $0.id, name: $0.name, layer: $0.layer, info: $0.info, mesh: morph.apply(to: $0.mesh))
         }
         structures = morphed
@@ -33,6 +36,21 @@ public struct StockBody: Sendable {
         // same as mapping against the morphed rig with bone-length scaling.
         mapper = AtlasMapper(atlas: atlas)
         byID = Dictionary(uniqueKeysWithValues: morphed.map { ($0.id, $0) })
+        let skinMeshes = morphed.filter { $0.layer == .skin }.map(\.mesh)
+        let points = skinMeshes.flatMap(\.positions), normals = skinMeshes.flatMap(\.normals)
+        var anchors: [String: Vec3] = [:]
+        for region in atlas.regions {
+            guard let a = mapper.anchor(of: region.id).map({ morph.apply($0) }) else { continue }
+            var best = -1
+            var bestD = Float.infinity
+            for (i, p) in points.enumerated() {
+                let d = (p - a).dotted(p - a)
+                if d < bestD { bestD = d; best = i }
+            }
+            // Lift slightly so the spot sits on, not in, the surface.
+            anchors[region.id] = best >= 0 ? points[best] + normals[best] * 0.004 : a
+        }
+        spotAnchors = anchors
     }
 
     public func structure(_ id: String) -> AnatomyStructure? { byID[id] }
@@ -42,8 +60,14 @@ public struct StockBody: Sendable {
         mapper.region(at: morph.invert(point))
     }
 
-    /// Where a region's pain spot should be drawn on this body.
+    /// Where a region's pain spot should be drawn on this body: the atlas anchor moved onto the
+    /// nearest point of the skin (lifted slightly so it sits on, not in, the surface).
     public func anchor(ofRegion id: String) -> Vec3? {
+        spotAnchors[id]
+    }
+
+    /// The atlas anchor itself (bone-relative), without snapping to the skin.
+    public func atlasAnchor(ofRegion id: String) -> Vec3? {
         mapper.anchor(of: id).map { morph.apply($0) }
     }
 
@@ -64,6 +88,8 @@ public struct SkeletonData: Sendable {
     public let atlas: BodyAtlas
     public let pathways: PathwayLibrary
     public let redFlags: RedFlagLibrary
+    /// Sculpted stock-body skin; nil falls back to capsule skin.
+    public var skin: MeshData?
 
     public init(atlas: Data, pathways: Data, redFlags: Data) throws {
         self.atlas = try BodyAtlas.load(from: atlas)
@@ -76,5 +102,6 @@ public struct SkeletonData: Sendable {
         try self.init(atlas: Data(contentsOf: directory.appendingPathComponent("body-atlas.json")),
                       pathways: Data(contentsOf: directory.appendingPathComponent("pain-pathways.json")),
                       redFlags: Data(contentsOf: directory.appendingPathComponent("red-flags.json")))
+        skin = (try? Data(contentsOf: directory.appendingPathComponent("stock-body-skin.bin"))).flatMap { try? MeshData.fromSkinBinary($0) }
     }
 }

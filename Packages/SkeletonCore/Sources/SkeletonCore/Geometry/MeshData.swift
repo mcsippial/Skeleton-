@@ -200,3 +200,31 @@ public struct CatmullRom: Sendable {
         (0...count).map { point(at: Float($0) / Float(count)) }
     }
 }
+
+public extension MeshData {
+    enum BinaryError: Error { case badHeader, truncated }
+
+    /// Reads `data/stock-body-skin.bin` (see tools/gen_body_skin.py): "SKN1", vertex count,
+    /// index count, then float32 positions, float32 normals and uint32 indices, little-endian.
+    static func fromSkinBinary(_ data: Data) throws -> MeshData {
+        guard data.count >= 12, data.prefix(4) == Data("SKN1".utf8) else { throw BinaryError.badHeader }
+        func u32(_ offset: Int) -> UInt32 {
+            data.withUnsafeBytes { UInt32(littleEndian: $0.loadUnaligned(fromByteOffset: offset, as: UInt32.self)) }
+        }
+        let v = Int(u32(4)), i = Int(u32(8))
+        let posStart = 12, nrmStart = posStart + v * 12, idxStart = nrmStart + v * 12
+        guard data.count >= idxStart + i * 4 else { throw BinaryError.truncated }
+        return data.withUnsafeBytes { raw in
+            func vec(_ base: Int, _ k: Int) -> Vec3 {
+                let o = base + k * 12
+                return Vec3(Float(bitPattern: UInt32(littleEndian: raw.loadUnaligned(fromByteOffset: o, as: UInt32.self))),
+                            Float(bitPattern: UInt32(littleEndian: raw.loadUnaligned(fromByteOffset: o + 4, as: UInt32.self))),
+                            Float(bitPattern: UInt32(littleEndian: raw.loadUnaligned(fromByteOffset: o + 8, as: UInt32.self))))
+            }
+            let positions = (0..<v).map { vec(posStart, $0) }
+            let normals = (0..<v).map { vec(nrmStart, $0) }
+            let indices = (0..<i).map { UInt32(littleEndian: raw.loadUnaligned(fromByteOffset: idxStart + $0 * 4, as: UInt32.self)) }
+            return MeshData(positions: positions, normals: normals, indices: indices)
+        }
+    }
+}
