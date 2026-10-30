@@ -1,0 +1,2440 @@
+{
+  "version": "1.0.0",
+  "description": "Region guides for single-pain insights. The rules layer scores each guide's contributors against what the person logged (pain type, triggers they ticked, words in their notes, pattern, age, sex, recurrence, health data, answers to follow-up questions) and passes the ranked candidates to Claude, which may only explain within them. Wording is deliberately 'often linked to', never a diagnosis.",
+  "scoring": {
+    "pain_type": 0.15,
+    "trigger": 0.2,
+    "keyword": 0.15,
+    "pattern": 0.1,
+    "health": 0.2,
+    "age": 0.1,
+    "recurring": 0.1,
+    "answer_yes": 0.3,
+    "answer_no": -0.25,
+    "max_confidence": 0.9,
+    "health_signals": {
+      "low_sleep": "average sleep in the 3 days before onset ≥15% below usual",
+      "low_hrv": "average HRV in the 3 days before onset ≥15% below usual",
+      "workout_spike": "workout minutes in the 3 days before onset ≥50% above usual"
+    }
+  },
+  "sources": {
+    "nhs_headaches": "NHS: Tension headaches (nhs.uk/conditions/tension-headaches)",
+    "nhs_tmd": "NHS: Temporomandibular disorder (nhs.uk/conditions/temporomandibular-disorder-tmd)",
+    "nhs_neck_pain": "NHS: Neck pain (nhs.uk/conditions/neck-pain)",
+    "nhs_shoulder_pain": "NHS: Shoulder pain (nhs.uk/conditions/shoulder-pain)",
+    "nhs_back_pain": "NHS: Back pain (nhs.uk/conditions/back-pain)",
+    "nice_low_back": "NICE NG59: Low back pain and sciatica in over 16s",
+    "nhs_chest_pain": "NHS: Chest pain (nhs.uk/conditions/chest-pain)",
+    "nhs_stomach_ache": "NHS: Stomach ache (nhs.uk/conditions/stomach-ache)",
+    "nhs_kidney_stones": "NHS: Kidney stones (nhs.uk/conditions/kidney-stones)",
+    "nhs_sciatica": "NHS: Sciatica (nhs.uk/conditions/sciatica)",
+    "si_joint": "Fortin JD et al. Sacroiliac joint pain referral maps. Spine. 1994.",
+    "nhs_hip_pain": "NHS: Hip pain in adults (nhs.uk/conditions/hip-pain)",
+    "hip_referral": "Lesher JM et al. Hip joint pain referral patterns. Pain Med. 2008.",
+    "nhs_groin_pain": "NHS: Groin pain (nhs.uk/conditions/groin-pain)",
+    "nhs_thigh": "NHS: Hamstring injury (nhs.uk/conditions/hamstring-injury)",
+    "nhs_knee_pain": "NHS: Knee pain (nhs.uk/conditions/knee-pain)",
+    "hip_knee": "Powers CM. The influence of abnormal hip mechanics on knee injury. JOSPT. 2010.",
+    "nhs_shin_splints": "NHS: Shin splints (nhs.uk/conditions/shin-splints)",
+    "plantar_heel": "Martin RL et al. Heel pain / plantar fasciitis clinical practice guideline. JOSPT. 2014.",
+    "nhs_arm_pain": "NHS: Arm pain (nhs.uk/conditions/arm-pain)",
+    "nhs_tennis_elbow": "NHS: Tennis elbow (nhs.uk/conditions/tennis-elbow)",
+    "nhs_carpal_tunnel": "NHS: Carpal tunnel syndrome (nhs.uk/conditions/carpal-tunnel-syndrome)",
+    "nhs_sore_throat": "NHS: Sore throat (nhs.uk/conditions/sore-throat)"
+  },
+  "general_contributors": [
+    {
+      "id": "general.sleep",
+      "name": "Short or poor sleep",
+      "explanation": "Nights with less sleep than usual lower the body's pain tolerance and slow recovery, so pain often flares after them.",
+      "prior": 0.0,
+      "signals": {
+        "health": [
+          "low_sleep"
+        ]
+      }
+    },
+    {
+      "id": "general.recovery",
+      "name": "Lower recovery (HRV) than usual",
+      "explanation": "Heart rate variability below your usual level often means the body is less recovered, which is commonly linked to more pain and slower healing.",
+      "prior": 0.0,
+      "signals": {
+        "health": [
+          "low_hrv"
+        ]
+      }
+    },
+    {
+      "id": "general.load",
+      "name": "A jump in activity",
+      "explanation": "A sudden increase in training or activity is one of the most common reasons for new muscle and tendon pain.",
+      "prior": 0.0,
+      "signals": {
+        "health": [
+          "workout_spike"
+        ]
+      }
+    },
+    {
+      "id": "general.stress",
+      "name": "Stress",
+      "explanation": "Stress makes muscles tense and the nervous system more sensitive, so pain often feels stronger when you're stressed.",
+      "prior": 0.0,
+      "signals": {
+        "triggers": [
+          "Stress"
+        ]
+      }
+    }
+  ],
+  "guides": [
+    {
+      "id": "head",
+      "title": "Head",
+      "stems": [
+        "forehead",
+        "crown",
+        "temple",
+        "occiput",
+        "face"
+      ],
+      "contributors": [
+        {
+          "id": "head.muscle_tension",
+          "name": "Tight neck and shoulder muscles",
+          "explanation": "Tension in the muscles at the back of the neck and across the shoulders commonly spreads up into the head, especially the back of the head and temples.",
+          "prior": 0.5,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "dull",
+              "tenderness"
+            ],
+            "triggers": [
+              "Screen time",
+              "Stress",
+              "Sleep position"
+            ],
+            "keywords": [
+              "desk",
+              "laptop",
+              "phone",
+              "neck"
+            ]
+          },
+          "ask": "Do your neck or shoulders feel tight or sore too?"
+        },
+        {
+          "id": "head.sleep",
+          "name": "Short or poor sleep",
+          "explanation": "Headaches are often linked to nights with too little or broken sleep.",
+          "prior": 0.35,
+          "signals": {
+            "keywords": [
+              "tired",
+              "slept",
+              "sleep",
+              "insomnia"
+            ],
+            "health": [
+              "low_sleep"
+            ]
+          },
+          "ask": "Have you slept less or worse than usual lately?"
+        },
+        {
+          "id": "head.eye_strain",
+          "name": "Eye strain from screens",
+          "explanation": "Long stretches of close screen work are commonly linked to aching around the forehead and temples.",
+          "prior": 0.35,
+          "signals": {
+            "triggers": [
+              "Screen time"
+            ],
+            "keywords": [
+              "screen",
+              "computer",
+              "reading"
+            ]
+          },
+          "ask": "Does it build up during long screen sessions?"
+        },
+        {
+          "id": "head.jaw",
+          "name": "Jaw clenching",
+          "explanation": "The jaw muscles run up to the temples, so clenching or grinding often shows up as temple ache.",
+          "prior": 0.25,
+          "signals": {
+            "triggers": [
+              "Chewing",
+              "Stress"
+            ],
+            "keywords": [
+              "clench",
+              "grind",
+              "jaw"
+            ]
+          },
+          "ask": "Do you clench your jaw or grind your teeth?"
+        },
+        {
+          "id": "head.hydration",
+          "name": "Not enough water or skipped meals",
+          "explanation": "Dehydration and long gaps between meals are common, simple contributors to headaches.",
+          "prior": 0.25,
+          "signals": {
+            "keywords": [
+              "water",
+              "thirsty",
+              "skipped",
+              "hungry",
+              "fasting",
+              "hangover"
+            ]
+          },
+          "ask": "Have you been drinking less or skipping meals?"
+        },
+        {
+          "id": "head.stress",
+          "name": "Stress",
+          "explanation": "Stress tends to tighten the head, neck and jaw muscles and is one of the most common headache triggers.",
+          "prior": 0.3,
+          "signals": {
+            "triggers": [
+              "Stress"
+            ],
+            "keywords": [
+              "stress",
+              "anxious",
+              "deadline",
+              "busy"
+            ]
+          }
+        }
+      ],
+      "self_care": [
+        "Take regular breaks from screens and look into the distance for a minute",
+        "Drink some water and eat regularly",
+        "Try gentle neck and shoulder stretches, or warmth on the back of the neck",
+        "Keep sleep and wake times regular"
+      ],
+      "avoid": [
+        "Long unbroken screen sessions",
+        "Skipping meals"
+      ],
+      "see_someone_if": [
+        "Headaches are becoming more frequent or different from your usual",
+        "It started after a knock to the head",
+        "It doesn't ease within a few days"
+      ],
+      "specialist": "GP",
+      "sources": [
+        "nhs_headaches"
+      ]
+    },
+    {
+      "id": "jaw",
+      "title": "Jaw",
+      "stems": [
+        "jaw",
+        "tmj",
+        "ear",
+        "chin"
+      ],
+      "contributors": [
+        {
+          "id": "jaw.clenching",
+          "name": "Clenching or grinding",
+          "explanation": "Clenching or grinding the teeth, often at night or under stress, overworks the jaw muscles and is one of the most common causes of jaw pain.",
+          "prior": 0.55,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "tenderness",
+              "stiffness",
+              "dull"
+            ],
+            "triggers": [
+              "Stress",
+              "Chewing"
+            ],
+            "keywords": [
+              "clench",
+              "grind",
+              "morning",
+              "teeth"
+            ]
+          },
+          "ask": "Is it worse when you wake up, or do you notice clenching?"
+        },
+        {
+          "id": "jaw.joint",
+          "name": "Jaw joint (TMJ) irritation",
+          "explanation": "The joint in front of the ear can get irritated from overuse, often with clicking, tenderness or pain when opening wide.",
+          "prior": 0.4,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "aching",
+              "tenderness"
+            ],
+            "triggers": [
+              "Chewing"
+            ],
+            "keywords": [
+              "click",
+              "pop",
+              "lock",
+              "yawn",
+              "open"
+            ]
+          },
+          "ask": "Does your jaw click, lock or hurt when you open wide?"
+        },
+        {
+          "id": "jaw.posture",
+          "name": "Forward-head posture",
+          "explanation": "When the head sits forward of the shoulders, the jaw and neck muscles work harder, which is commonly linked to jaw ache.",
+          "prior": 0.3,
+          "signals": {
+            "triggers": [
+              "Screen time"
+            ],
+            "keywords": [
+              "desk",
+              "phone",
+              "posture"
+            ]
+          },
+          "ask": "Do you spend long periods at a desk or looking down at a phone?"
+        },
+        {
+          "id": "jaw.dental",
+          "name": "A tooth or gum problem",
+          "explanation": "Pain from a tooth or gum can feel like jaw pain, especially if it's worse with hot, cold or sweet food.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "throbbing",
+              "sharp"
+            ],
+            "keywords": [
+              "tooth",
+              "teeth",
+              "gum",
+              "dentist",
+              "cold",
+              "sweet"
+            ]
+          },
+          "ask": "Is one tooth sensitive to hot, cold or biting?"
+        },
+        {
+          "id": "jaw.ear",
+          "name": "Ear or sinus irritation",
+          "explanation": "Ear and sinus problems often feel like pain around the jaw joint, especially with a cold or blocked nose.",
+          "prior": 0.2,
+          "signals": {
+            "keywords": [
+              "cold",
+              "sinus",
+              "ear",
+              "blocked",
+              "congested"
+            ]
+          },
+          "ask": "Any cold, blocked nose or ear discomfort?"
+        }
+      ],
+      "self_care": [
+        "Rest the jaw: soft foods for a few days, avoid gum and wide yawns",
+        "Warmth on the side of the face can ease the muscles",
+        "Notice clenching during the day and let the teeth rest apart",
+        "Check your posture at a desk or on your phone"
+      ],
+      "avoid": [
+        "Chewing gum or very chewy food",
+        "Biting nails or pens"
+      ],
+      "see_someone_if": [
+        "Your jaw locks or you can't open it properly",
+        "It lasts more than two weeks",
+        "A tooth is involved (see a dentist)"
+      ],
+      "specialist": "Dentist (for clenching or TMJ) or physical therapist",
+      "sources": [
+        "nhs_tmd"
+      ]
+    },
+    {
+      "id": "neck",
+      "title": "Neck",
+      "stems": [
+        "neck_post",
+        "neck_lat",
+        "neck_ant",
+        "trapezius_upper"
+      ],
+      "contributors": [
+        {
+          "id": "neck.posture",
+          "name": "Desk or phone posture",
+          "explanation": "Long periods looking down or forward load the neck muscles and are one of the most common reasons for neck pain.",
+          "prior": 0.55,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "stiffness",
+              "tenderness",
+              "cramping",
+              "dull"
+            ],
+            "triggers": [
+              "Screen time",
+              "Sitting"
+            ],
+            "keywords": [
+              "desk",
+              "laptop",
+              "phone",
+              "computer",
+              "driving"
+            ]
+          },
+          "ask": "Is it worse after long desk or phone sessions?"
+        },
+        {
+          "id": "neck.sleep_position",
+          "name": "Sleeping position or pillow",
+          "explanation": "Waking with a stiff, sore neck is commonly linked to an awkward sleeping position or an unsupportive pillow.",
+          "prior": 0.4,
+          "signals": {
+            "pain_types": [
+              "stiffness",
+              "aching"
+            ],
+            "triggers": [
+              "Sleep position"
+            ],
+            "keywords": [
+              "woke",
+              "morning",
+              "pillow",
+              "slept"
+            ]
+          },
+          "ask": "Was it there when you woke up?"
+        },
+        {
+          "id": "neck.muscle_strain",
+          "name": "Muscle strain",
+          "explanation": "A sudden movement, lifting or sport can strain the neck muscles, causing pain and stiffness when turning the head.",
+          "prior": 0.4,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "stiffness"
+            ],
+            "triggers": [
+              "Lifting",
+              "Exercise"
+            ],
+            "keywords": [
+              "turned",
+              "twist",
+              "gym",
+              "lifted"
+            ]
+          },
+          "ask": "Did it start after a sudden movement, lifting or sport?"
+        },
+        {
+          "id": "neck.nerve",
+          "name": "Irritated nerve in the neck",
+          "explanation": "Pain that travels into the shoulder or arm, or comes with tingling or numbness, is often linked to an irritated nerve root in the neck.",
+          "prior": 0.2,
+          "signals": {
+            "pain_types": [
+              "tingling",
+              "numbness",
+              "shooting",
+              "burning"
+            ],
+            "keywords": [
+              "arm",
+              "hand",
+              "fingers",
+              "tingling",
+              "numb"
+            ]
+          },
+          "ask": "Does it travel into your shoulder, arm or hand, or come with tingling?"
+        },
+        {
+          "id": "neck.stress",
+          "name": "Stress and tension",
+          "explanation": "Stress tends to tighten the muscles across the top of the shoulders and neck.",
+          "prior": 0.3,
+          "signals": {
+            "triggers": [
+              "Stress"
+            ],
+            "keywords": [
+              "stress",
+              "anxious",
+              "tense"
+            ]
+          }
+        }
+      ],
+      "self_care": [
+        "Keep the neck moving gently: slow turns and tilts within comfort",
+        "Warmth across the neck and shoulders",
+        "Raise your screen to eye level and take regular breaks",
+        "Try a lower or firmer pillow"
+      ],
+      "avoid": [
+        "Holding one position for a long time",
+        "Carrying heavy bags on one shoulder"
+      ],
+      "see_someone_if": [
+        "It spreads into your arm with tingling or weakness",
+        "It doesn't improve after 2 weeks",
+        "It started after a fall or accident"
+      ],
+      "specialist": "Physical therapist or GP",
+      "sources": [
+        "nhs_neck_pain"
+      ]
+    },
+    {
+      "id": "shoulder",
+      "title": "Shoulder",
+      "stems": [
+        "shoulder_top",
+        "shoulder_ant",
+        "shoulder_lat",
+        "clavicle",
+        "armpit"
+      ],
+      "contributors": [
+        {
+          "id": "shoulder.tendons",
+          "name": "Irritated shoulder tendons (rotator cuff)",
+          "explanation": "The tendons around the shoulder commonly get irritated from repeated overhead movements, often hurting when lifting the arm or lying on that side.",
+          "prior": 0.5,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "sharp",
+              "tenderness"
+            ],
+            "triggers": [
+              "Exercise",
+              "Lifting",
+              "Sleep position"
+            ],
+            "keywords": [
+              "overhead",
+              "reach",
+              "throw",
+              "swim",
+              "lying on",
+              "paint"
+            ]
+          },
+          "ask": "Does it hurt to lift your arm out to the side or overhead?"
+        },
+        {
+          "id": "shoulder.posture",
+          "name": "Rounded-shoulder posture",
+          "explanation": "Sitting with rounded shoulders narrows the space for the shoulder tendons and loads the muscles around the shoulder blade.",
+          "prior": 0.35,
+          "signals": {
+            "triggers": [
+              "Sitting",
+              "Screen time"
+            ],
+            "keywords": [
+              "desk",
+              "computer"
+            ]
+          },
+          "ask": "Do you spend long periods at a desk?"
+        },
+        {
+          "id": "shoulder.neck",
+          "name": "Pain coming from the neck",
+          "explanation": "Neck problems commonly refer pain to the top and outside of the shoulder, especially with tingling down the arm.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "tingling",
+              "numbness",
+              "shooting",
+              "burning"
+            ],
+            "keywords": [
+              "neck",
+              "tingling",
+              "arm"
+            ]
+          },
+          "ask": "Is your neck stiff or sore too?"
+        },
+        {
+          "id": "shoulder.strain",
+          "name": "Muscle strain",
+          "explanation": "Lifting, pushing or a sudden pull can strain the muscles around the shoulder.",
+          "prior": 0.35,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "aching"
+            ],
+            "triggers": [
+              "Lifting",
+              "Exercise"
+            ],
+            "keywords": [
+              "lifted",
+              "pulled",
+              "gym",
+              "carried"
+            ]
+          },
+          "ask": "Did it start after lifting, pushing or a sudden pull?"
+        },
+        {
+          "id": "shoulder.stiffness",
+          "name": "Shoulder stiffness",
+          "explanation": "A shoulder that steadily stiffens over weeks, with pain at night, is worth having checked, especially from middle age.",
+          "prior": 0.15,
+          "signals": {
+            "pain_types": [
+              "stiffness"
+            ],
+            "keywords": [
+              "stiff",
+              "can't lift",
+              "night"
+            ],
+            "age_over": 40
+          },
+          "ask": "Is it getting harder to move your arm over weeks?"
+        }
+      ],
+      "self_care": [
+        "Keep the shoulder moving gently within comfort, e.g. pendulum swings",
+        "Ice for 15 minutes after activity, or warmth for stiffness",
+        "Sit tall with shoulders relaxed and screen at eye level",
+        "Sleep on the other side with a pillow to hug"
+      ],
+      "avoid": [
+        "Repeated overhead reaching or lifting",
+        "Sleeping on the sore side"
+      ],
+      "see_someone_if": [
+        "You can't lift your arm",
+        "It started after a fall",
+        "Pain at night keeps getting worse",
+        "No improvement after 2 weeks"
+      ],
+      "specialist": "Physical therapist or sports-medicine doctor",
+      "sources": [
+        "nhs_shoulder_pain"
+      ]
+    },
+    {
+      "id": "upper_back",
+      "title": "Upper and mid back",
+      "stems": [
+        "upper_back",
+        "mid_back",
+        "scapula"
+      ],
+      "contributors": [
+        {
+          "id": "upper_back.posture",
+          "name": "Desk or phone posture",
+          "explanation": "Hunching forward for long periods loads the muscles between and around the shoulder blades and is one of the most common reasons for upper-back ache.",
+          "prior": 0.55,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "stiffness",
+              "tenderness",
+              "cramping",
+              "dull"
+            ],
+            "triggers": [
+              "Sitting",
+              "Screen time"
+            ],
+            "keywords": [
+              "desk",
+              "laptop",
+              "phone",
+              "driving"
+            ]
+          },
+          "ask": "Is it worse after long periods sitting or looking at a screen?"
+        },
+        {
+          "id": "upper_back.strain",
+          "name": "Muscle strain",
+          "explanation": "Lifting, twisting or sport can strain the muscles of the upper back, often with a sharp catch on certain movements.",
+          "prior": 0.4,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "aching"
+            ],
+            "triggers": [
+              "Lifting",
+              "Exercise"
+            ],
+            "keywords": [
+              "lifted",
+              "twisted",
+              "gym",
+              "row"
+            ]
+          },
+          "ask": "Did it start after lifting, twisting or sport?"
+        },
+        {
+          "id": "upper_back.rib_joint",
+          "name": "Stiff rib joint",
+          "explanation": "The small joints where the ribs meet the spine can get stiff and irritated, often hurting with deep breaths or twisting.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "stabbing"
+            ],
+            "keywords": [
+              "breath",
+              "breathe",
+              "twist"
+            ]
+          },
+          "ask": "Does it catch when you breathe in deeply or twist?"
+        },
+        {
+          "id": "upper_back.stress",
+          "name": "Stress and tension",
+          "explanation": "Stress tightens the muscles across the shoulders and upper back.",
+          "prior": 0.3,
+          "signals": {
+            "triggers": [
+              "Stress"
+            ],
+            "keywords": [
+              "stress",
+              "tense"
+            ]
+          }
+        },
+        {
+          "id": "upper_back.sleep",
+          "name": "Sleeping position",
+          "explanation": "An awkward position overnight commonly leaves the upper back stiff in the morning.",
+          "prior": 0.3,
+          "signals": {
+            "triggers": [
+              "Sleep position"
+            ],
+            "keywords": [
+              "woke",
+              "morning",
+              "mattress"
+            ]
+          },
+          "ask": "Is it worst when you first wake up?"
+        }
+      ],
+      "self_care": [
+        "Gentle movement: shoulder rolls and slow upper-back twists",
+        "Warmth on the sore area",
+        "Break up sitting every 30–45 minutes",
+        "Set your screen at eye level"
+      ],
+      "avoid": [
+        "Long slumped sitting",
+        "Heavy lifting until it settles"
+      ],
+      "see_someone_if": [
+        "It came with chest pain, breathlessness or sweating (call emergency services)",
+        "It started after a fall",
+        "No improvement after 2 weeks"
+      ],
+      "specialist": "Physical therapist or GP",
+      "sources": [
+        "nhs_back_pain"
+      ]
+    },
+    {
+      "id": "chest",
+      "title": "Chest",
+      "stems": [
+        "chest",
+        "sternum",
+        "ribs_lat"
+      ],
+      "contributors": [
+        {
+          "id": "chest.muscle",
+          "name": "Chest-wall muscle strain",
+          "explanation": "Exercise, lifting or heavy coughing can strain the muscles between the ribs, often sore to press and worse with movement.",
+          "prior": 0.35,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "aching",
+              "tenderness"
+            ],
+            "triggers": [
+              "Exercise",
+              "Lifting"
+            ],
+            "keywords": [
+              "gym",
+              "press",
+              "push",
+              "cough",
+              "lifted"
+            ]
+          },
+          "ask": "Is it sore when you press on it or move your arms?"
+        },
+        {
+          "id": "chest.cartilage",
+          "name": "Irritated rib cartilage",
+          "explanation": "The cartilage joining the ribs to the breastbone can get irritated, causing pain that's tender to touch and worse with deep breaths.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "tenderness",
+              "aching"
+            ],
+            "keywords": [
+              "press",
+              "touch",
+              "breath"
+            ]
+          },
+          "ask": "Is it tender when you press along the breastbone?"
+        },
+        {
+          "id": "chest.posture",
+          "name": "Posture and tight chest muscles",
+          "explanation": "Long hours sitting with rounded shoulders tighten the chest muscles.",
+          "prior": 0.2,
+          "signals": {
+            "triggers": [
+              "Sitting",
+              "Screen time"
+            ],
+            "keywords": [
+              "desk"
+            ]
+          }
+        }
+      ],
+      "self_care": [
+        "Rest from the movement that set it off",
+        "Gentle warmth on the sore area",
+        "Gentle chest-opening stretches once it eases"
+      ],
+      "avoid": [
+        "Heavy pushing or lifting until it settles"
+      ],
+      "see_someone_if": [
+        "Any chest pain with breathlessness, sweating, sickness, or pain spreading to the arm, jaw or back: call emergency services",
+        "Chest pain that comes on with effort",
+        "It doesn't settle within a few days"
+      ],
+      "specialist": "GP (urgently if there are any warning signs)",
+      "sources": [
+        "nhs_chest_pain"
+      ]
+    },
+    {
+      "id": "abdomen",
+      "title": "Abdomen",
+      "stems": [
+        "abd_upper",
+        "abd_lower",
+        "epigastric",
+        "umbilical",
+        "suprapubic"
+      ],
+      "contributors": [
+        {
+          "id": "abdomen.digestion",
+          "name": "Digestion: indigestion, wind or constipation",
+          "explanation": "Most short-lived tummy pain is linked to digestion, often related to meals, wind or constipation.",
+          "prior": 0.45,
+          "signals": {
+            "pain_types": [
+              "dull",
+              "aching",
+              "cramping",
+              "burning"
+            ],
+            "keywords": [
+              "eat",
+              "meal",
+              "food",
+              "bloat",
+              "gas",
+              "constipat",
+              "toilet",
+              "indigestion",
+              "heartburn"
+            ]
+          },
+          "ask": "Is it related to eating, or are your bowels different from usual?"
+        },
+        {
+          "id": "abdomen.muscle",
+          "name": "Abdominal muscle strain",
+          "explanation": "Sit-ups, lifting or twisting can strain the abdominal muscles, which hurts more with movement than at rest.",
+          "prior": 0.3,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "aching",
+              "tenderness"
+            ],
+            "triggers": [
+              "Exercise",
+              "Lifting"
+            ],
+            "keywords": [
+              "gym",
+              "sit-up",
+              "crunch",
+              "core",
+              "lifted"
+            ]
+          },
+          "ask": "Does it hurt more when you move, sit up or tense your stomach?"
+        },
+        {
+          "id": "abdomen.period",
+          "name": "Period pain",
+          "explanation": "Lower tummy cramps are very commonly linked to periods and can also be felt in the lower back.",
+          "prior": 0.4,
+          "signals": {
+            "pain_types": [
+              "cramping",
+              "dull",
+              "aching"
+            ],
+            "keywords": [
+              "period",
+              "menstrual",
+              "cycle"
+            ]
+          },
+          "ask": "Is it linked to your period?",
+          "sex": "female"
+        },
+        {
+          "id": "abdomen.urinary",
+          "name": "Bladder irritation",
+          "explanation": "Pain low in the middle of the tummy, with burning or needing to pee often, is often linked to bladder irritation.",
+          "prior": 0.2,
+          "signals": {
+            "pain_types": [
+              "burning",
+              "dull"
+            ],
+            "keywords": [
+              "pee",
+              "urine",
+              "bladder",
+              "burning"
+            ]
+          },
+          "ask": "Any burning when you pee, or needing to go more often?"
+        }
+      ],
+      "self_care": [
+        "Small, simple meals and plenty of water",
+        "Gentle walking often helps digestion",
+        "A warm (not hot) water bottle on the area",
+        "Note what you ate and when it hurts"
+      ],
+      "avoid": [
+        "Large or fatty meals until it settles",
+        "Strenuous core exercise if it's a muscle strain"
+      ],
+      "see_someone_if": [
+        "Severe pain, a hard swollen tummy, vomiting or blood: get urgent care",
+        "Pain with fever",
+        "It keeps coming back or lasts more than a few days",
+        "Unexplained weight loss"
+      ],
+      "specialist": "GP",
+      "sources": [
+        "nhs_stomach_ache"
+      ]
+    },
+    {
+      "id": "flank",
+      "title": "Side of the body (flank)",
+      "stems": [
+        "flank"
+      ],
+      "contributors": [
+        {
+          "id": "flank.muscle",
+          "name": "Muscle strain",
+          "explanation": "Twisting, lifting or sport can strain the muscles along the side of the trunk.",
+          "prior": 0.4,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "aching",
+              "stiffness"
+            ],
+            "triggers": [
+              "Lifting",
+              "Bending",
+              "Exercise"
+            ],
+            "keywords": [
+              "twist",
+              "lifted",
+              "gym",
+              "golf"
+            ]
+          },
+          "ask": "Did it start after twisting, lifting or sport?"
+        },
+        {
+          "id": "flank.kidney",
+          "name": "Kidney or urinary problem",
+          "explanation": "Pain in the flank that comes in waves, or comes with fever or changes when you pee, can come from the kidney and needs checking.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "cramping",
+              "throbbing"
+            ],
+            "keywords": [
+              "pee",
+              "urine",
+              "fever",
+              "waves",
+              "kidney"
+            ]
+          },
+          "ask": "Is it with fever, or pain or changes when you pee?"
+        },
+        {
+          "id": "flank.posture",
+          "name": "Long sitting or one-sided posture",
+          "explanation": "Sitting or standing leaning to one side for long periods loads the muscles on that side.",
+          "prior": 0.25,
+          "signals": {
+            "triggers": [
+              "Sitting",
+              "Standing"
+            ]
+          }
+        }
+      ],
+      "self_care": [
+        "Gentle movement and side stretches if it's muscular",
+        "Warmth on the area",
+        "Drink plenty of water"
+      ],
+      "avoid": [
+        "Heavy lifting and twisting until it settles"
+      ],
+      "see_someone_if": [
+        "Fever, chills, or pain or blood when you pee: see a doctor today",
+        "Pain coming in strong waves",
+        "It doesn't settle within a few days"
+      ],
+      "specialist": "GP",
+      "sources": [
+        "nhs_kidney_stones"
+      ]
+    },
+    {
+      "id": "lower_back",
+      "title": "Lower back",
+      "stems": [
+        "lumbar",
+        "tailbone"
+      ],
+      "contributors": [
+        {
+          "id": "lower_back.strain",
+          "name": "Muscle or ligament strain",
+          "explanation": "Lifting, bending or a sudden twist commonly strains the muscles and ligaments of the lower back. This is the most common cause of lower back pain and usually settles within a few weeks.",
+          "prior": 0.55,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "aching",
+              "stiffness",
+              "cramping"
+            ],
+            "triggers": [
+              "Lifting",
+              "Bending",
+              "Exercise"
+            ],
+            "keywords": [
+              "lift",
+              "deadlift",
+              "gym",
+              "bent",
+              "moved",
+              "garden",
+              "picked up"
+            ]
+          },
+          "ask": "Did it start during or after lifting, bending or a workout?"
+        },
+        {
+          "id": "lower_back.sitting",
+          "name": "Long periods of sitting",
+          "explanation": "Sitting for hours, especially slumped, loads the lower back and is a very common reason for an aching, stiff back.",
+          "prior": 0.4,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "dull",
+              "stiffness"
+            ],
+            "triggers": [
+              "Sitting"
+            ],
+            "keywords": [
+              "sitting",
+              "desk",
+              "driving",
+              "car",
+              "flight"
+            ]
+          },
+          "ask": "Is it worse after sitting for a long time?"
+        },
+        {
+          "id": "lower_back.nerve",
+          "name": "Irritated nerve (sciatic or lumbar)",
+          "explanation": "When a disc or joint in the lower spine irritates a nerve root, pain can travel into the buttock or down the leg, often with tingling or numbness.",
+          "prior": 0.2,
+          "signals": {
+            "pain_types": [
+              "tingling",
+              "numbness",
+              "shooting",
+              "burning"
+            ],
+            "keywords": [
+              "leg",
+              "buttock",
+              "down my",
+              "tingling",
+              "numb",
+              "sciatica"
+            ]
+          },
+          "ask": "Does it travel into your buttock or down your leg, or come with tingling?"
+        },
+        {
+          "id": "lower_back.joint",
+          "name": "Stiff spinal joints",
+          "explanation": "The small joints in the lower spine can get stiff and sore, often worse in the morning or when leaning back.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "stiffness",
+              "aching"
+            ],
+            "keywords": [
+              "morning",
+              "stiff",
+              "lean back",
+              "arch"
+            ],
+            "age_over": 40
+          },
+          "ask": "Is it stiffest in the morning or worse when leaning back?"
+        },
+        {
+          "id": "lower_back.weak_support",
+          "name": "Weak core and hip muscles",
+          "explanation": "When the deep core and glute muscles aren't doing their share, the lower back takes extra load, especially with lots of sitting.",
+          "prior": 0.25,
+          "signals": {
+            "triggers": [
+              "Standing",
+              "Walking"
+            ],
+            "recurring": true
+          }
+        },
+        {
+          "id": "lower_back.period",
+          "name": "Period-related back pain",
+          "explanation": "Lower back ache is commonly linked to periods.",
+          "prior": 0.2,
+          "signals": {
+            "pain_types": [
+              "cramping",
+              "dull",
+              "aching"
+            ],
+            "keywords": [
+              "period",
+              "menstrual"
+            ]
+          },
+          "ask": "Is it linked to your period?",
+          "sex": "female"
+        }
+      ],
+      "self_care": [
+        "Keep moving gently: short walks help more than bed rest",
+        "Warmth on the lower back",
+        "Break up sitting every 30–45 minutes",
+        "Gentle stretches like knees-to-chest or child's pose, within comfort",
+        "Sleep on your side with a pillow between the knees"
+      ],
+      "avoid": [
+        "Heavy lifting or twisting until it settles",
+        "Long periods sitting without a break"
+      ],
+      "see_someone_if": [
+        "Numbness around the groin or bottom, or new bladder or bowel problems: get emergency care",
+        "Leg weakness",
+        "It started after a fall",
+        "No improvement after 4–6 weeks"
+      ],
+      "specialist": "Physical therapist or sports-medicine doctor",
+      "sources": [
+        "nhs_back_pain",
+        "nice_low_back"
+      ]
+    },
+    {
+      "id": "si_buttock",
+      "title": "SI joint and buttock",
+      "stems": [
+        "si_joint",
+        "buttock"
+      ],
+      "contributors": [
+        {
+          "id": "si.joint",
+          "name": "SI joint irritation",
+          "explanation": "The joint where the spine meets the pelvis can get irritated, causing pain just to one side of the base of the spine, sometimes spreading into the buttock or groin.",
+          "prior": 0.45,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "sharp",
+              "dull"
+            ],
+            "triggers": [
+              "Walking",
+              "Standing",
+              "Exercise"
+            ],
+            "keywords": [
+              "stairs",
+              "car",
+              "one leg",
+              "running"
+            ]
+          },
+          "ask": "Is it worse standing on one leg, climbing stairs or getting out of a car?"
+        },
+        {
+          "id": "si.glute_tight",
+          "name": "Tight glute or piriformis muscle",
+          "explanation": "Tight muscles deep in the buttock are commonly linked to buttock ache, and can press on the sciatic nerve.",
+          "prior": 0.4,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "tenderness",
+              "stiffness",
+              "dull"
+            ],
+            "triggers": [
+              "Sitting",
+              "Exercise"
+            ],
+            "keywords": [
+              "sitting",
+              "running",
+              "glute",
+              "tight"
+            ]
+          },
+          "ask": "Is it worse after sitting, or ease with stretching the buttock?"
+        },
+        {
+          "id": "si.nerve",
+          "name": "Irritated sciatic nerve",
+          "explanation": "Pain from the lower back can travel into the buttock and down the leg along the sciatic nerve, often with tingling.",
+          "prior": 0.2,
+          "signals": {
+            "pain_types": [
+              "tingling",
+              "numbness",
+              "shooting",
+              "burning"
+            ],
+            "keywords": [
+              "leg",
+              "tingling",
+              "numb",
+              "sciatica"
+            ]
+          },
+          "ask": "Does it travel down the back of your leg or come with tingling?"
+        },
+        {
+          "id": "si.pregnancy",
+          "name": "Pregnancy or recent birth",
+          "explanation": "Pelvic joints loosen in pregnancy and after birth, which commonly causes SI joint and buttock pain.",
+          "prior": 0.2,
+          "signals": {
+            "keywords": [
+              "pregnant",
+              "pregnancy",
+              "birth",
+              "postpartum"
+            ]
+          },
+          "sex": "female"
+        }
+      ],
+      "self_care": [
+        "Keep moving gently; short walks",
+        "Gentle glute and hip stretches",
+        "Warmth on the area",
+        "Avoid sitting on hard surfaces for long periods"
+      ],
+      "avoid": [
+        "Long sitting on hard seats",
+        "Standing on one leg (e.g. putting trousers on) — sit down instead"
+      ],
+      "see_someone_if": [
+        "Numbness around the groin or bottom, or bladder or bowel changes: get emergency care",
+        "Leg weakness",
+        "No improvement after 4 weeks"
+      ],
+      "specialist": "Physical therapist",
+      "sources": [
+        "nhs_sciatica",
+        "si_joint"
+      ]
+    },
+    {
+      "id": "hip",
+      "title": "Hip",
+      "stems": [
+        "hip_lat",
+        "hip_ant"
+      ],
+      "contributors": [
+        {
+          "id": "hip.gluteal_tendon",
+          "name": "Irritated tendons on the outside of the hip",
+          "explanation": "The tendons over the bony point of the hip commonly get irritated, hurting when lying on that side, climbing stairs or standing on one leg.",
+          "prior": 0.45,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "tenderness",
+              "sharp"
+            ],
+            "triggers": [
+              "Sleep position",
+              "Walking"
+            ],
+            "keywords": [
+              "lying",
+              "side",
+              "stairs",
+              "night"
+            ]
+          },
+          "ask": "Is it sore lying on that side at night?"
+        },
+        {
+          "id": "hip.flexor",
+          "name": "Tight or strained hip flexors",
+          "explanation": "The muscles at the front of the hip tighten with lots of sitting and can be strained by running, kicking or sprinting.",
+          "prior": 0.4,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "sharp",
+              "stiffness"
+            ],
+            "triggers": [
+              "Sitting",
+              "Exercise"
+            ],
+            "keywords": [
+              "running",
+              "kick",
+              "sprint",
+              "sitting"
+            ]
+          },
+          "ask": "Is it worse lifting your knee or after sitting?"
+        },
+        {
+          "id": "hip.joint",
+          "name": "Hip joint irritation or wear",
+          "explanation": "Pain deep in the hip or groin, with stiffness putting on socks or getting out of a car, is commonly linked to the hip joint, especially from middle age.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "stiffness",
+              "dull"
+            ],
+            "keywords": [
+              "socks",
+              "car",
+              "stiff",
+              "groin"
+            ],
+            "age_over": 45
+          },
+          "ask": "Is it stiff putting on socks or getting out of a car?"
+        },
+        {
+          "id": "hip.from_back",
+          "name": "Pain coming from the lower back",
+          "explanation": "Lower back problems can refer pain into the hip and outer thigh.",
+          "prior": 0.2,
+          "signals": {
+            "pain_types": [
+              "tingling",
+              "numbness",
+              "shooting",
+              "burning"
+            ],
+            "keywords": [
+              "back"
+            ]
+          },
+          "ask": "Is your lower back sore too?"
+        }
+      ],
+      "self_care": [
+        "Keep moving within comfort",
+        "Sleep with a pillow between your knees",
+        "Gentle hip stretches and glute strengthening once it eases",
+        "Ice after activity or warmth for stiffness"
+      ],
+      "avoid": [
+        "Lying on the sore side",
+        "Crossing your legs or standing with weight on one hip"
+      ],
+      "see_someone_if": [
+        "You can't put weight on the leg",
+        "It started after a fall",
+        "Fever with a hot, swollen joint",
+        "No improvement after 2–3 weeks"
+      ],
+      "specialist": "Physical therapist or sports-medicine doctor",
+      "sources": [
+        "nhs_hip_pain",
+        "hip_referral"
+      ]
+    },
+    {
+      "id": "groin",
+      "title": "Groin and inner thigh",
+      "stems": [
+        "groin",
+        "pubic",
+        "thigh_med"
+      ],
+      "contributors": [
+        {
+          "id": "groin.adductor",
+          "name": "Strained inner-thigh muscle",
+          "explanation": "Sports with quick changes of direction, kicking or stretching wide commonly strain the inner-thigh (adductor) muscles.",
+          "prior": 0.45,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "aching",
+              "tenderness"
+            ],
+            "triggers": [
+              "Exercise"
+            ],
+            "keywords": [
+              "football",
+              "soccer",
+              "kick",
+              "sprint",
+              "stretch",
+              "gym"
+            ]
+          },
+          "ask": "Did it start with sport, kicking or a sudden stretch?"
+        },
+        {
+          "id": "groin.hip_joint",
+          "name": "Hip joint",
+          "explanation": "The hip joint sits right behind the groin, so hip problems often show up as groin pain.",
+          "prior": 0.3,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "dull",
+              "stiffness"
+            ],
+            "keywords": [
+              "squat",
+              "stiff",
+              "hip"
+            ],
+            "age_over": 40
+          },
+          "ask": "Is it stiff or sore when you turn your leg in or squat?"
+        },
+        {
+          "id": "groin.from_back",
+          "name": "Pain coming from the lower back or SI joint",
+          "explanation": "Nerves from the lower spine supply the groin, so lower back or SI joint problems can be felt here.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "tingling",
+              "numbness",
+              "shooting",
+              "burning"
+            ],
+            "keywords": [
+              "back"
+            ]
+          },
+          "ask": "Have you had lower back pain recently?"
+        },
+        {
+          "id": "groin.hernia",
+          "name": "Hernia",
+          "explanation": "A bulge in the groin that's sore when coughing or lifting is often a hernia and should be checked by a doctor.",
+          "prior": 0.15,
+          "signals": {
+            "triggers": [
+              "Lifting"
+            ],
+            "keywords": [
+              "lump",
+              "bulge",
+              "cough",
+              "swelling"
+            ]
+          },
+          "ask": "Is there a lump or bulge that's sore when you cough or lift?"
+        }
+      ],
+      "self_care": [
+        "Rest from the sport or movement that set it off",
+        "Ice for 15 minutes after activity in the first days",
+        "Gentle inner-thigh stretches once it eases"
+      ],
+      "avoid": [
+        "Sprinting, kicking and quick changes of direction until it settles"
+      ],
+      "see_someone_if": [
+        "A lump in the groin",
+        "Testicular pain or swelling: get urgent care",
+        "Fever, or pain with peeing",
+        "No improvement after 2 weeks"
+      ],
+      "specialist": "Sports-medicine doctor or physical therapist",
+      "sources": [
+        "nhs_groin_pain"
+      ]
+    },
+    {
+      "id": "thigh",
+      "title": "Thigh",
+      "stems": [
+        "thigh_ant",
+        "thigh_post",
+        "thigh_lat"
+      ],
+      "contributors": [
+        {
+          "id": "thigh.strain",
+          "name": "Muscle strain",
+          "explanation": "Sprinting, kicking or a sudden stretch commonly strains the hamstring (back) or quadriceps (front) muscles.",
+          "prior": 0.45,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "aching",
+              "tenderness",
+              "cramping"
+            ],
+            "triggers": [
+              "Exercise"
+            ],
+            "keywords": [
+              "sprint",
+              "run",
+              "kick",
+              "football",
+              "pulled",
+              "gym"
+            ]
+          },
+          "ask": "Did it start suddenly during sport or a sprint?"
+        },
+        {
+          "id": "thigh.overuse",
+          "name": "Overuse or a jump in training",
+          "explanation": "A sudden increase in running, cycling or leg training often leaves the thigh muscles sore.",
+          "prior": 0.35,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "stiffness",
+              "dull"
+            ],
+            "triggers": [
+              "Exercise",
+              "Walking"
+            ],
+            "keywords": [
+              "training",
+              "mileage",
+              "more running",
+              "leg day"
+            ],
+            "health": [
+              "workout_spike"
+            ]
+          },
+          "ask": "Have you increased your training recently?"
+        },
+        {
+          "id": "thigh.nerve",
+          "name": "Irritated nerve from the back",
+          "explanation": "Tingling or burning in the thigh is often linked to an irritated nerve coming from the lower back.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "tingling",
+              "numbness",
+              "shooting",
+              "burning"
+            ],
+            "keywords": [
+              "tingling",
+              "numb",
+              "burning",
+              "back"
+            ]
+          },
+          "ask": "Is there tingling, numbness or burning?"
+        },
+        {
+          "id": "thigh.it_band",
+          "name": "Tight band on the outside of the thigh",
+          "explanation": "The tissue band down the outside of the thigh (IT band) commonly gets sore with running or cycling.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "tenderness"
+            ],
+            "triggers": [
+              "Exercise",
+              "Walking"
+            ],
+            "keywords": [
+              "running",
+              "cycling",
+              "outside"
+            ]
+          }
+        }
+      ],
+      "self_care": [
+        "Rest from sprinting or heavy leg work for a few days",
+        "Ice in the first 2 days, then gentle warmth",
+        "Gentle stretching and gradual return to activity"
+      ],
+      "avoid": [
+        "Sprinting or stretching hard into pain"
+      ],
+      "see_someone_if": [
+        "Large bruising or a dent in the muscle",
+        "Calf or leg swelling with warmth (get checked today)",
+        "No improvement after 2 weeks"
+      ],
+      "specialist": "Physical therapist",
+      "sources": [
+        "nhs_thigh"
+      ]
+    },
+    {
+      "id": "knee",
+      "title": "Knee",
+      "stems": [
+        "knee_ant",
+        "knee_med",
+        "knee_lat",
+        "knee_post"
+      ],
+      "contributors": [
+        {
+          "id": "knee.patellofemoral",
+          "name": "Overload around the kneecap",
+          "explanation": "Pain around or behind the kneecap, worse on stairs, squats or after sitting with bent knees, is very commonly linked to overload of the kneecap joint.",
+          "prior": 0.45,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "dull"
+            ],
+            "triggers": [
+              "Exercise",
+              "Walking",
+              "Sitting"
+            ],
+            "keywords": [
+              "stairs",
+              "squat",
+              "running",
+              "kneel",
+              "sitting"
+            ]
+          },
+          "ask": "Is it worse going down stairs, squatting or after sitting with bent knees?"
+        },
+        {
+          "id": "knee.hip_weakness",
+          "name": "Weak hip and glute muscles",
+          "explanation": "When the hip muscles don't control the thigh well, the knee takes extra load, which is a common reason for knee pain in runners.",
+          "prior": 0.3,
+          "signals": {
+            "triggers": [
+              "Exercise",
+              "Walking"
+            ],
+            "keywords": [
+              "running",
+              "run"
+            ]
+          }
+        },
+        {
+          "id": "knee.it_band",
+          "name": "Tight IT band",
+          "explanation": "Pain on the outside of the knee during running or cycling is often linked to the tissue band on the outside of the thigh.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "aching"
+            ],
+            "triggers": [
+              "Exercise"
+            ],
+            "keywords": [
+              "running",
+              "cycling",
+              "outside"
+            ]
+          },
+          "ask": "Does it come on partway through a run or ride?"
+        },
+        {
+          "id": "knee.twist",
+          "name": "Twisting injury (cartilage or ligament)",
+          "explanation": "A twist, especially with clicking, locking or swelling, can irritate the knee cartilage or ligaments and should be checked.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "sharp"
+            ],
+            "keywords": [
+              "twist",
+              "click",
+              "lock",
+              "gave way",
+              "swell",
+              "pop"
+            ]
+          },
+          "ask": "Did you twist it, or does it click, lock, give way or swell?"
+        },
+        {
+          "id": "knee.wear",
+          "name": "Joint wear",
+          "explanation": "Stiffness and aching that's worse in the morning and after activity is commonly linked to joint wear, especially from middle age.",
+          "prior": 0.2,
+          "signals": {
+            "pain_types": [
+              "stiffness",
+              "aching"
+            ],
+            "keywords": [
+              "morning",
+              "stiff"
+            ],
+            "age_over": 50
+          }
+        }
+      ],
+      "self_care": [
+        "Reduce the activity that hurts rather than stopping completely",
+        "Ice for 15 minutes after activity",
+        "Strengthen thighs and hips gradually once it eases",
+        "Supportive footwear"
+      ],
+      "avoid": [
+        "Deep squats, kneeling and running downhill until it settles"
+      ],
+      "see_someone_if": [
+        "It locks, gives way or swells quickly",
+        "You can't put weight on it",
+        "Calf swelling with warmth (get checked today)",
+        "No improvement after 2–3 weeks"
+      ],
+      "specialist": "Physical therapist or sports-medicine doctor",
+      "sources": [
+        "nhs_knee_pain",
+        "hip_knee"
+      ]
+    },
+    {
+      "id": "lower_leg",
+      "title": "Shin and calf",
+      "stems": [
+        "shin",
+        "calf"
+      ],
+      "contributors": [
+        {
+          "id": "lower_leg.shin_splints",
+          "name": "Shin overload (shin splints)",
+          "explanation": "Pain along the inside of the shin is commonly linked to a sudden increase in running or jumping.",
+          "prior": 0.4,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "dull",
+              "tenderness"
+            ],
+            "triggers": [
+              "Exercise",
+              "Walking"
+            ],
+            "keywords": [
+              "running",
+              "run",
+              "jump",
+              "training"
+            ],
+            "health": [
+              "workout_spike"
+            ]
+          },
+          "ask": "Did you recently increase running or jumping?"
+        },
+        {
+          "id": "lower_leg.calf_strain",
+          "name": "Calf strain",
+          "explanation": "A sudden push-off, like a sprint or jump, commonly strains the calf muscle, often felt as a sharp pull.",
+          "prior": 0.4,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "tenderness"
+            ],
+            "triggers": [
+              "Exercise"
+            ],
+            "keywords": [
+              "sprint",
+              "pulled",
+              "tennis",
+              "jump"
+            ]
+          },
+          "ask": "Did you feel a sudden pull during sport?"
+        },
+        {
+          "id": "lower_leg.cramp",
+          "name": "Cramps",
+          "explanation": "Calf cramps are common, especially at night or after exercise, and are often linked to tired muscles or dehydration.",
+          "prior": 0.3,
+          "signals": {
+            "pain_types": [
+              "cramping"
+            ],
+            "keywords": [
+              "cramp",
+              "night",
+              "water"
+            ]
+          },
+          "ask": "Does it come as sudden, tight cramps?"
+        },
+        {
+          "id": "lower_leg.tight",
+          "name": "Tight calves",
+          "explanation": "Tight calf muscles commonly ache after walking, running or long periods on your feet.",
+          "prior": 0.3,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "stiffness"
+            ],
+            "triggers": [
+              "Walking",
+              "Standing"
+            ]
+          }
+        }
+      ],
+      "self_care": [
+        "Rest from running for a few days and return gradually",
+        "Ice after activity",
+        "Gentle calf stretches",
+        "Supportive, cushioned footwear"
+      ],
+      "avoid": [
+        "Jumping and hard running until it settles"
+      ],
+      "see_someone_if": [
+        "One calf swollen, warm or red: get checked today (possible clot)",
+        "Pain in one spot on the shin bone that's sore to press (possible stress fracture)",
+        "No improvement after 2 weeks"
+      ],
+      "specialist": "Physical therapist or sports-medicine doctor",
+      "sources": [
+        "nhs_shin_splints"
+      ]
+    },
+    {
+      "id": "foot",
+      "title": "Foot, ankle and heel",
+      "stems": [
+        "achilles",
+        "ankle_med",
+        "ankle_lat",
+        "heel",
+        "plantar_foot",
+        "foot_dorsum",
+        "toes"
+      ],
+      "contributors": [
+        {
+          "id": "foot.plantar",
+          "name": "Irritated tissue under the heel (plantar fascia)",
+          "explanation": "Heel or arch pain that's worst with the first steps in the morning is very commonly linked to the plantar fascia.",
+          "prior": 0.45,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "aching",
+              "stabbing"
+            ],
+            "triggers": [
+              "Walking",
+              "Standing",
+              "Exercise"
+            ],
+            "keywords": [
+              "morning",
+              "first steps",
+              "barefoot",
+              "standing"
+            ]
+          },
+          "ask": "Is it worst with your first steps in the morning?"
+        },
+        {
+          "id": "foot.achilles",
+          "name": "Achilles overload",
+          "explanation": "Pain at the back of the heel or above it, stiff in the morning and after rest, is often linked to Achilles tendon overload.",
+          "prior": 0.35,
+          "signals": {
+            "pain_types": [
+              "stiffness",
+              "aching"
+            ],
+            "triggers": [
+              "Exercise",
+              "Walking"
+            ],
+            "keywords": [
+              "running",
+              "hills",
+              "morning",
+              "achilles"
+            ]
+          },
+          "ask": "Is the back of your heel stiff in the morning?"
+        },
+        {
+          "id": "foot.sprain",
+          "name": "Ankle sprain",
+          "explanation": "Rolling the ankle commonly stretches the ligaments on the outside, causing pain and swelling.",
+          "prior": 0.35,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "aching",
+              "throbbing"
+            ],
+            "keywords": [
+              "rolled",
+              "twisted",
+              "sprain",
+              "swollen"
+            ]
+          },
+          "ask": "Did you roll or twist your ankle?"
+        },
+        {
+          "id": "foot.footwear",
+          "name": "Footwear",
+          "explanation": "Unsupportive, tight or worn-out shoes are a common, simple contributor to foot pain.",
+          "prior": 0.3,
+          "signals": {
+            "triggers": [
+              "Walking",
+              "Standing"
+            ],
+            "keywords": [
+              "shoes",
+              "heels",
+              "new shoes",
+              "flat"
+            ]
+          }
+        },
+        {
+          "id": "foot.calf",
+          "name": "Tight calves",
+          "explanation": "Tight calves pull on the Achilles and plantar fascia, which is commonly linked to heel and arch pain.",
+          "prior": 0.25,
+          "signals": {
+            "triggers": [
+              "Exercise",
+              "Standing"
+            ]
+          }
+        }
+      ],
+      "self_care": [
+        "Supportive, cushioned shoes; avoid going barefoot on hard floors",
+        "Gentle calf and arch stretches, especially before the first steps of the day",
+        "Roll your arch over a cold bottle",
+        "Ease back on running or long standing"
+      ],
+      "avoid": [
+        "Walking barefoot on hard floors",
+        "Running or jumping into pain"
+      ],
+      "see_someone_if": [
+        "You can't put weight on it or it looks deformed after an injury",
+        "Rapid swelling, redness and heat",
+        "Numbness in the foot",
+        "No improvement after 2–3 weeks"
+      ],
+      "specialist": "Physical therapist or podiatrist",
+      "sources": [
+        "plantar_heel"
+      ]
+    },
+    {
+      "id": "arm",
+      "title": "Upper arm",
+      "stems": [
+        "upper_arm_ant",
+        "upper_arm_post"
+      ],
+      "contributors": [
+        {
+          "id": "arm.strain",
+          "name": "Muscle strain",
+          "explanation": "Lifting, carrying or gym work commonly strains the biceps or triceps.",
+          "prior": 0.45,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "sharp",
+              "tenderness"
+            ],
+            "triggers": [
+              "Lifting",
+              "Exercise"
+            ],
+            "keywords": [
+              "gym",
+              "curl",
+              "lifted",
+              "carried"
+            ]
+          },
+          "ask": "Did it start after lifting, carrying or the gym?"
+        },
+        {
+          "id": "arm.shoulder",
+          "name": "Pain from the shoulder",
+          "explanation": "Shoulder tendon problems commonly cause an ache in the outer upper arm.",
+          "prior": 0.3,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "dull"
+            ],
+            "keywords": [
+              "shoulder",
+              "overhead"
+            ]
+          },
+          "ask": "Does it hurt more lifting your arm to the side?"
+        },
+        {
+          "id": "arm.nerve",
+          "name": "Irritated nerve from the neck",
+          "explanation": "Tingling, burning or pain running down the arm is often linked to an irritated nerve in the neck.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "tingling",
+              "numbness",
+              "shooting",
+              "burning"
+            ],
+            "keywords": [
+              "neck",
+              "tingling",
+              "numb",
+              "fingers"
+            ]
+          },
+          "ask": "Is there tingling or numbness, or neck pain too?"
+        }
+      ],
+      "self_care": [
+        "Rest from the lifting that set it off",
+        "Ice after activity, warmth for stiffness",
+        "Gentle movement within comfort"
+      ],
+      "avoid": [
+        "Heavy lifting until it settles"
+      ],
+      "see_someone_if": [
+        "Arm pain with chest pain, breathlessness or sweating: call emergency services",
+        "A sudden pop with bruising or a bulge in the upper arm",
+        "Weakness or numbness",
+        "No improvement after 2 weeks"
+      ],
+      "specialist": "Physical therapist",
+      "sources": [
+        "nhs_arm_pain"
+      ]
+    },
+    {
+      "id": "elbow",
+      "title": "Elbow",
+      "stems": [
+        "elbow_lat",
+        "elbow_med"
+      ],
+      "contributors": [
+        {
+          "id": "elbow.tendon",
+          "name": "Overloaded forearm tendons (tennis or golfer's elbow)",
+          "explanation": "Repeated gripping, lifting or mouse and keyboard work commonly overloads the tendons that attach at the elbow.",
+          "prior": 0.55,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "sharp",
+              "tenderness"
+            ],
+            "triggers": [
+              "Lifting",
+              "Exercise",
+              "Screen time"
+            ],
+            "keywords": [
+              "grip",
+              "mouse",
+              "typing",
+              "tennis",
+              "golf",
+              "kettle",
+              "climbing",
+              "tools"
+            ]
+          },
+          "ask": "Is it worse gripping, lifting a kettle or using a mouse?"
+        },
+        {
+          "id": "elbow.nerve",
+          "name": "Irritated nerve at the elbow",
+          "explanation": "Tingling into the ring and little fingers, especially when the elbow is bent for a long time, is often linked to the nerve at the inner elbow.",
+          "prior": 0.2,
+          "signals": {
+            "pain_types": [
+              "tingling",
+              "numbness",
+              "shooting",
+              "burning"
+            ],
+            "keywords": [
+              "tingling",
+              "little finger",
+              "ring finger",
+              "numb",
+              "bent"
+            ]
+          },
+          "ask": "Do your ring or little fingers tingle?"
+        },
+        {
+          "id": "elbow.knock",
+          "name": "Knock or bruise",
+          "explanation": "A knock to the elbow can leave it sore for a while.",
+          "prior": 0.15,
+          "signals": {
+            "keywords": [
+              "hit",
+              "knocked",
+              "bumped",
+              "fell"
+            ]
+          }
+        }
+      ],
+      "self_care": [
+        "Ease off the gripping or lifting that triggers it",
+        "Ice after activity",
+        "Lift with palms up and keep the wrist straight",
+        "Check your mouse and keyboard setup"
+      ],
+      "avoid": [
+        "Repetitive gripping and heavy lifting with the wrist bent"
+      ],
+      "see_someone_if": [
+        "Swelling, heat and redness",
+        "It started after a fall",
+        "Numbness or weakness in the hand",
+        "No improvement after 3–4 weeks"
+      ],
+      "specialist": "Physical therapist",
+      "sources": [
+        "nhs_tennis_elbow"
+      ]
+    },
+    {
+      "id": "hand",
+      "title": "Forearm, wrist and hand",
+      "stems": [
+        "forearm_ant",
+        "forearm_post",
+        "wrist",
+        "hand",
+        "fingers"
+      ],
+      "contributors": [
+        {
+          "id": "hand.repetitive",
+          "name": "Repetitive strain",
+          "explanation": "Long hours typing, using a phone or doing repetitive hand work commonly overloads the forearm and wrist tendons.",
+          "prior": 0.5,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "tenderness",
+              "burning",
+              "stiffness"
+            ],
+            "triggers": [
+              "Screen time"
+            ],
+            "keywords": [
+              "typing",
+              "keyboard",
+              "mouse",
+              "phone",
+              "texting",
+              "gaming"
+            ]
+          },
+          "ask": "Is it worse after typing, phone use or repetitive work?"
+        },
+        {
+          "id": "hand.nerve_wrist",
+          "name": "Pressure on the nerve at the wrist",
+          "explanation": "Tingling or numbness in the thumb, index and middle fingers, often at night, is commonly linked to pressure on the nerve through the wrist.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "tingling",
+              "numbness",
+              "shooting",
+              "burning"
+            ],
+            "keywords": [
+              "tingling",
+              "numb",
+              "night",
+              "thumb",
+              "fingers"
+            ]
+          },
+          "ask": "Do your thumb and first fingers tingle, especially at night?"
+        },
+        {
+          "id": "hand.joint",
+          "name": "Stiff or worn finger joints",
+          "explanation": "Aching, stiff finger or thumb joints, worse in the morning, are commonly linked to joint wear, especially from middle age.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "stiffness",
+              "aching"
+            ],
+            "keywords": [
+              "morning",
+              "stiff",
+              "knuckle",
+              "joint"
+            ],
+            "age_over": 45
+          },
+          "ask": "Are your finger joints stiff in the morning?"
+        },
+        {
+          "id": "hand.sprain",
+          "name": "Wrist sprain",
+          "explanation": "A fall onto the hand or a sudden twist can sprain the wrist.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "sharp",
+              "throbbing"
+            ],
+            "keywords": [
+              "fell",
+              "fall",
+              "twisted",
+              "sprain"
+            ]
+          },
+          "ask": "Did you fall onto your hand or twist your wrist?"
+        }
+      ],
+      "self_care": [
+        "Take regular breaks from typing and phone use",
+        "Keep wrists straight; check your desk setup",
+        "Gentle wrist and finger stretches",
+        "A wrist splint at night can help tingling"
+      ],
+      "avoid": [
+        "Long unbroken typing or gaming sessions"
+      ],
+      "see_someone_if": [
+        "Pain after a fall onto the hand (possible fracture)",
+        "Numbness or weakness that doesn't go away",
+        "Hot, red, swollen joints",
+        "No improvement after 2–3 weeks"
+      ],
+      "specialist": "Physical therapist or GP",
+      "sources": [
+        "nhs_carpal_tunnel"
+      ]
+    },
+    {
+      "id": "throat",
+      "title": "Throat",
+      "stems": [
+        "throat"
+      ],
+      "contributors": [
+        {
+          "id": "throat.infection",
+          "name": "Cold or throat infection",
+          "explanation": "A sore throat is most often from a viral infection and usually settles within a week.",
+          "prior": 0.5,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "burning",
+              "tenderness"
+            ],
+            "keywords": [
+              "cold",
+              "swallow",
+              "fever",
+              "cough",
+              "sore throat"
+            ]
+          },
+          "ask": "Any cold, fever, or soreness when swallowing?"
+        },
+        {
+          "id": "throat.neck_muscle",
+          "name": "Front-of-neck muscle strain",
+          "explanation": "The muscles at the front of the neck can get sore with posture, coughing or strain.",
+          "prior": 0.25,
+          "signals": {
+            "pain_types": [
+              "aching",
+              "stiffness"
+            ],
+            "triggers": [
+              "Screen time",
+              "Sleep position"
+            ]
+          }
+        }
+      ],
+      "self_care": [
+        "Warm drinks and rest",
+        "Drink plenty of water"
+      ],
+      "avoid": [
+        "Smoking and very hot or spicy food until it settles"
+      ],
+      "see_someone_if": [
+        "Difficulty breathing or swallowing: get urgent care",
+        "It lasts more than a week",
+        "Throat or neck pain with chest pain or breathlessness: call emergency services"
+      ],
+      "specialist": "GP",
+      "sources": [
+        "nhs_sore_throat"
+      ]
+    }
+  ]
+}
