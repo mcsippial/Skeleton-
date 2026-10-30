@@ -12,7 +12,7 @@ struct BodyRealityView: View {
         GeometryReader { geo in
             RealityView { content in
                 content.camera = .virtual
-                controller.build(body3D)
+                await controller.build(body3D)
                 content.add(controller.root)
                 controller.update(model.sceneState)
             } update: { _ in

@@ -24,12 +24,12 @@ final class BodySceneController {
     }
 
     /// Builds entities for the stock body. Mesh generation must run on the main actor.
-    func build(_ body: StockBody) {
+    func build(_ body: StockBody) async {
         guard !applied.built else { return }
         applied.built = true
         root.name = "Body"
 
-        let ibl = makeImageBasedLight()
+        let ibl = await makeImageBasedLight()
         if let ibl { root.addChild(ibl) }
 
         for layer in AnatomyLayer.allCases {
@@ -157,9 +157,9 @@ final class BodySceneController {
 
     /// Soft studio environment generated in code (bright top, light grey floor), so image-based
     /// lighting works without bundling an HDR. Swap for a real studio HDR later.
-    private func makeImageBasedLight() -> Entity? {
+    private func makeImageBasedLight() async -> Entity? {
         guard let image = Self.studioEnvironmentImage(),
-              let env = try? EnvironmentResource.generate(fromEquirectangular: image) else { return nil }
+              let env = try? await EnvironmentResource(equirectangular: image) else { return nil }
         let entity = Entity()
         entity.name = "ibl"
         entity.components.set(ImageBasedLightComponent(source: .single(env), intensityExponent: 0.4))
