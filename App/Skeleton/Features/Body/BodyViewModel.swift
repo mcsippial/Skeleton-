@@ -128,23 +128,51 @@ final class BodyViewModel {
 
     func togglePlay() {
         if isPlaying { stopPlaying(); return }
-        let range = timelineRange
-        let start = (timelineDate == nil) ? range.lowerBound : displayDate
+        play(timelineRange, endLive: true)
+    }
+
+    /// Replays one pain pattern, weather-radar style: the body shows the days from just before
+    /// it started to just after the latest pain, then stays on the last day.
+    func replay(_ episode: Episode) {
+        if isPlaying { stopPlaying(); return }
+        play(replayRange(episode), endLive: false)
+    }
+
+    func replayRange(_ episode: Episode) -> ClosedRange<Date> {
+        let start = episode.startedAt.addingTimeInterval(-86_400)
+        return start...max(start.addingTimeInterval(3600), min(episode.lastEntryAt.addingTimeInterval(86_400), Date()))
+    }
+
+    private func play(_ range: ClosedRange<Date>, endLive: Bool) {
+        let restart = timelineDate.map { $0 >= range.upperBound.addingTimeInterval(-60) || $0 < range.lowerBound } ?? true
+        let start = restart ? range.lowerBound : displayDate
         isPlaying = true
         playTask = Task {
             var t = start
-            // The whole history plays in about 8 seconds.
-            let step = range.upperBound.timeIntervalSince(range.lowerBound) / (8 * 30)
+            // The whole range plays in about 6 seconds.
+            let step = range.upperBound.timeIntervalSince(range.lowerBound) / (6 * 30)
             while !Task.isCancelled, t < range.upperBound {
                 timelineDate = t
                 try? await Task.sleep(for: .milliseconds(33))
                 t = t.addingTimeInterval(step)
             }
             if !Task.isCancelled {
-                timelineDate = nil
+                timelineDate = endLive ? nil : range.upperBound
                 isPlaying = false
             }
         }
+    }
+
+    /// Moves the replay to a date inside a pattern's range (no snapping back to live).
+    func scrubReplay(to date: Date) {
+        stopPlaying()
+        timelineDate = min(date, Date())
+    }
+
+    /// Back to today.
+    func endReplay() {
+        stopPlaying()
+        timelineDate = nil
     }
 
     func stopPlaying() {
@@ -257,6 +285,7 @@ final class BodyViewModel {
     }
 
     func closeEpisode() {
+        endReplay()
         selectedEpisode = nil
         insight = nil
         insightError = nil
@@ -515,6 +544,7 @@ final class BodyViewModel {
     }
 
     func clearSelection() {
+        endReplay()
         selection = nil
         selectedSpot = nil
         selectedEpisode = nil

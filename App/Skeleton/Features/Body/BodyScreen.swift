@@ -203,48 +203,65 @@ struct BodyScreen: View {
         return ""
     }
 
-    /// One-line summary shown when the drawer is collapsed.
-    private var panelSummary: String {
-        if let s = model.selection { return s.region.map { "\(s.structureName) · \($0.name)" } ?? s.structureName }
-        if let r = model.selectedSpot { return "\(model.regionName(r)) · history" }
-        if let e = model.selectedEpisode { return "Insight · \(e.title)" }
-        let count = model.episodes.count
-        if count > 0 { return "\(count) linked \(count == 1 ? "episode" : "episodes") · tap to see insights" }
-        return model.spots.isEmpty ? "Tap the body to log pain" : "Tap a glowing spot for its history"
+    /// One-line summary shown when the sheet is collapsed, in plain language.
+    private var panelSummary: (title: String, action: String?) {
+        if let s = model.selection { return (s.region.map { "\(s.structureName) · \($0.name)" } ?? s.structureName, nil) }
+        if let r = model.selectedSpot { return ("\(model.regionName(r)) · your history here", nil) }
+        if let e = model.selectedEpisode { return ("\(e.title) · why they may be connected", nil) }
+        let episodes = model.episodes
+        if let ep = episodes.first, episodes.count == 1 {
+            return ("Your \(ep.title.replacingOccurrences(of: " → ", with: " and ").lowercased()) pain may be connected", "See why")
+        }
+        if episodes.count > 1 { return ("\(episodes.count) of your pains may be connected", "See why") }
+        if !model.spots.isEmpty { return ("Tap a glowing spot to see its history", nil) }
+        return ("Tap where it hurts, or use the mic to describe it", nil)
     }
 
-    /// Bottom sheet: timeline, today's health numbers, then a collapsible detail area.
+    /// Bottom sheet: a plain-language summary that drags or taps open into the detail area.
     /// Collapsed by default so the body stays the hero; red flags are always visible.
     private var panel: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Capsule().fill(Theme.Color.secondaryText.opacity(0.3)).frame(width: 36, height: 5)
-                .frame(maxWidth: .infinity)
-                .padding(.top, 2)
-
-            TimelineScrubber(model: model)
-            if !model.metricsOnDisplayDate.isEmpty {
-                MetricStrip(values: model.metricsOnDisplayDate)
-            }
-
-            Divider().opacity(0.5)
-
-            Button {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { panelExpanded.toggle() }
-            } label: {
+            // The whole top of the sheet is the handle: tap to toggle, drag up/down to open/close.
+            VStack(spacing: 10) {
+                Capsule().fill(Theme.Color.secondaryText.opacity(0.3)).frame(width: 36, height: 5)
                 HStack(spacing: 8) {
-                    Text(panelSummary)
-                        .font(.system(size: 14, weight: .semibold))
-                        .lineLimit(1)
-                    Spacer()
-                    Image(systemName: "chevron.up")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Theme.Color.secondaryText)
-                        .rotationEffect(.degrees(panelExpanded ? 180 : 0))
+                    Text(panelSummary.title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    Spacer(minLength: 8)
+                    if let action = panelSummary.action, !panelExpanded {
+                        Text(action)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12).padding(.vertical, 7)
+                            .background(Capsule().fill(Theme.Color.text))
+                    }
                 }
-                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(panelExpanded ? "Collapse details" : "Show details: \(panelSummary)")
+            .padding(.top, 2)
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 0).onEnded { g in
+                let dy = g.predictedEndTranslation.height
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
+                    if abs(g.translation.height) < 8 {
+                        // A tap: "See why" opens the pattern directly when there's just one.
+                        if !panelExpanded, model.selectedEpisode == nil, model.selection == nil, model.selectedSpot == nil,
+                           model.episodes.count == 1, let ep = model.episodes.first {
+                            model.open(ep)
+                        }
+                        panelExpanded.toggle()
+                    } else if dy < -30 {
+                        panelExpanded = true
+                    } else if dy > 30 {
+                        panelExpanded = false
+                    }
+                }
+            })
+            .accessibilityElement(children: .combine)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityHint(panelExpanded ? "Collapses the details" : "Shows the details")
 
             // Red flags are always shown first and are never softened, even with the sheet closed.
             if !panelExpanded {
@@ -310,12 +327,6 @@ struct BodyScreen: View {
                 .shadow(color: .black.opacity(0.08), radius: 20, y: -4)
                 .ignoresSafeArea(edges: .bottom)
         }
-        .gesture(DragGesture(minimumDistance: 16).onEnded { g in
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
-                if g.translation.height < -24 { panelExpanded = true }
-                if g.translation.height > 24 { panelExpanded = false }
-            }
-        })
         .onChange(of: panelFocus) { _, focus in
             withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { panelExpanded = !focus.isEmpty }
         }

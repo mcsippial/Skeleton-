@@ -38,6 +38,9 @@ targets:
         buildPhase: resources
     entitlements:
       path: App/Skeleton/Skeleton.entitlements
+      properties:
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
     dependencies:
       - package: SkeletonCore
       - sdk: HealthKit.framework
@@ -64,6 +67,9 @@ targets:
       base:
         # Bundle ID and signing team come from App/Config/*.xcconfig so they survive `xcodegen generate`.
         TARGETED_DEVICE_FAMILY: "1"
+        # HealthKit needs its entitlement embedded even in Simulator builds (ad-hoc signed when no team is set).
+        CODE_SIGN_ENTITLEMENTS: App/Skeleton/Skeleton.entitlements
+        "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
         GENERATE_INFOPLIST_FILE: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 

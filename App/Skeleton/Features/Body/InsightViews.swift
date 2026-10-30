@@ -1,26 +1,33 @@
 import SkeletonCore
 import SwiftUI
 
-/// List of episodes (related pains grouped by the pathway library).
+/// Pain patterns: pains that appeared close together in areas a known pathway connects.
 struct EpisodesCard: View {
     let model: BodyViewModel
 
     var body: some View {
         let episodes = model.episodes
         if !episodes.isEmpty {
-            GlassCard(label: "Episodes") {
+            GlassCard(label: "Pain patterns") {
+                Text("Pains that showed up close together in areas that are known to affect each other.")
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.Color.secondaryText)
+                    .padding(.bottom, 2)
                 ForEach(episodes) { ep in
                     Button { model.open(ep) } label: {
                         HStack(spacing: 10) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(ep.title).font(.system(size: 15, weight: .semibold))
-                                Text("\(dateRange(ep)) · \(ep.entryIDs.count) linked entries")
+                                Text("\(ep.entryIDs.count) related pains · \(dateRange(ep))")
                                     .font(Theme.Font.caption)
                                     .foregroundStyle(Theme.Color.secondaryText)
                             }
                             Spacer()
+                            Text("See why")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(Theme.Color.secondaryText)
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.system(size: 11, weight: .bold))
                                 .foregroundStyle(Theme.Color.secondaryText)
                         }
                         .contentShape(Rectangle())
@@ -35,8 +42,8 @@ struct EpisodesCard: View {
 
     private func dateRange(_ ep: Episode) -> String {
         let start = ep.startedAt.formatted(.dateTime.month(.abbreviated).day())
-        let end = ep.isActive ? "present" : ep.lastEntryAt.formatted(.dateTime.month(.abbreviated).day())
-        return "\(start)–\(end)"
+        let end = ep.isActive ? "now" : ep.lastEntryAt.formatted(.dateTime.month(.abbreviated).day())
+        return "\(start) – \(end)"
     }
 }
 
@@ -47,6 +54,16 @@ struct InsightCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+            GlassCard(label: "Watch it move") {
+                Text("Play the days of this pattern to see where the pain started and how it spread.")
+                    .font(Theme.Font.caption)
+                    .foregroundStyle(Theme.Color.secondaryText)
+                ReplayScrubber(model: model, episode: episode)
+                    .padding(.top, 4)
+                if !model.metricsOnDisplayDate.isEmpty {
+                    MetricStrip(values: model.metricsOnDisplayDate)
+                }
+            }
             if let insight = model.insight {
                 ForEach(insight.redFlags) { flag in
                     RedFlagCard(headline: flag.headline, title: flag.title, message: flag.message,
@@ -69,7 +86,7 @@ struct InsightCard: View {
     }
 
     private func content(_ i: Insight) -> some View {
-        GlassCard(label: "Pattern found · \(episode.entryIDs.count) linked entries", rainbow: true) {
+        GlassCard(label: "Why these may be connected", rainbow: true) {
             Text(i.title).font(.system(size: 17, weight: .semibold)).tracking(-0.2)
             if i.modelVersion == "rules-only" {
                 Text("AI explanation unavailable right now. This is from Skeleton's pathway library only.")

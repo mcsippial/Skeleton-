@@ -82,9 +82,9 @@ Account → demographics (age, sex, height, weight, activity level, relevant his
 - Reference: the working concept preview (`/docs/preview/index.html`) shows the intended interactions.
 
 ### 5.4 Pain flow (the signature feature)
-- **Timeline scrubber** under the body: drag through days/weeks and watch pain appear, intensify, fade and move.
+- **Replay** (weather-radar style): each pain pattern has a ▶ and scrubber that plays its days on the body, so you watch pain appear, intensify, fade and move. It lives in the pattern view, not on the home screen (changed Oct 2026 at the owner's request; the home screen stays focused on the body).
 - **Flow arcs:** when a new pain appears in a region connected (per the pathway library) to a recent pain within a window (default 14 days), draw an animated arc between them on the body.
-- Group related entries into **episodes** (e.g., "Jaw–neck episode, Oct 27–present").
+- Group related entries into **episodes**, shown to users as **pain patterns** in plain language (e.g., "Your jaw and neck pain may be connected · See why").
 
 ### 5.5 Insights / cause engine
 For each episode or on demand:

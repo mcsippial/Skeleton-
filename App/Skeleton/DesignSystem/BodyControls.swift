@@ -49,16 +49,20 @@ struct LayerRail: View {
     }
 }
 
-/// Timeline scrubber: logged pains as dots along the track (colour = intensity).
-struct TimelineScrubber: View {
+/// Weather-radar style replay for one pain pattern: ▶ plays the days, the track can be dragged,
+/// and each logged pain shows as a dot (colour = intensity).
+struct ReplayScrubber: View {
     let model: BodyViewModel
+    let episode: Episode
 
     var body: some View {
-        let range = model.timelineRange
+        let range = model.replayRange(episode)
         let span = max(range.upperBound.timeIntervalSince(range.lowerBound), 1)
-        let progress = min(max(model.displayDate.timeIntervalSince(range.lowerBound) / span, 0), 1)
+        let current = model.timelineDate ?? range.upperBound
+        let progress = min(max(current.timeIntervalSince(range.lowerBound) / span, 0), 1)
+        let ids = Set(episode.entryIDs)
         HStack(spacing: 12) {
-            Button { model.togglePlay() } label: {
+            Button { model.replay(episode) } label: {
                 Image(systemName: model.isPlaying ? "pause.fill" : "play.fill")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(.white)
@@ -66,21 +70,21 @@ struct TimelineScrubber: View {
                     .background(Circle().fill(Theme.Color.text))
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(model.isPlaying ? "Pause" : "Play pain history")
+            .accessibilityLabel(model.isPlaying ? "Pause" : "Watch how this pain moved")
 
             GeometryReader { geo in
                 let w = geo.size.width
                 ZStack(alignment: .leading) {
                     Capsule().fill(Theme.Color.track).frame(height: 4)
                     Capsule().fill(Theme.Color.text.opacity(0.85)).frame(width: max(4, w * progress), height: 4)
-                    ForEach(model.entries) { e in
+                    ForEach(model.entries.filter { ids.contains($0.id) }) { e in
                         let x = w * min(max(e.onsetAt.timeIntervalSince(range.lowerBound) / span, 0), 1)
                         Circle()
                             .fill(Theme.Color.pain(intensity: e.intensity))
-                            .frame(width: 7, height: 7)
+                            .frame(width: 8, height: 8)
                             .overlay(Circle().strokeBorder(.white, lineWidth: 1.2))
-                            .offset(x: x - 3.5, y: -9)
-                            .opacity(e.onsetAt <= model.displayDate ? 1 : 0.35)
+                            .offset(x: x - 4, y: -10)
+                            .opacity(e.onsetAt <= current ? 1 : 0.35)
                     }
                     Circle()
                         .fill(.white)
@@ -91,28 +95,25 @@ struct TimelineScrubber: View {
                 .frame(height: geo.size.height)
                 .contentShape(Rectangle())
                 .gesture(DragGesture(minimumDistance: 0).onChanged { g in
-                    model.scrub(to: range.lowerBound.addingTimeInterval(min(max(g.location.x / w, 0), 1) * span))
+                    model.scrubReplay(to: range.lowerBound.addingTimeInterval(min(max(g.location.x / w, 0), 1) * span))
                 })
             }
             .frame(height: 34)
             .accessibilityElement()
-            .accessibilityLabel("Timeline")
-            .accessibilityValue(label)
+            .accessibilityLabel("Pain pattern timeline")
+            .accessibilityValue(Self.label(current))
             .accessibilityAdjustableAction { dir in
-                let step: TimeInterval = dir == .increment ? 86_400 : -86_400
-                model.scrub(to: model.displayDate.addingTimeInterval(step))
+                model.scrubReplay(to: current.addingTimeInterval(dir == .increment ? 86_400 : -86_400))
             }
 
-            Text(label)
+            Text(Self.label(current))
                 .font(.system(size: 13, weight: .semibold).monospacedDigit())
                 .frame(width: 64, alignment: .trailing)
                 .contentTransition(.numericText())
         }
     }
 
-    private var label: String {
-        if model.timelineDate == nil { return "Today" }
-        let d = model.displayDate
+    static func label(_ d: Date) -> String {
         if Calendar.current.isDateInToday(d) { return "Today" }
         if Calendar.current.isDateInYesterday(d) { return "Yesterday" }
         return d.formatted(.dateTime.month(.abbreviated).day())

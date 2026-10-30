@@ -37,10 +37,21 @@ final class HealthKitService: HealthService, @unchecked Sendable {
         ]
     }
 
+    enum HealthAccessError: LocalizedError {
+        case notEntitled
+        var errorDescription: String? {
+            "This build of Skeleton isn't allowed to use Apple Health yet. Rebuild after regenerating the project (xcodegen generate) so the HealthKit permission is included."
+        }
+    }
+
     func requestAccess() async throws {
         var read: Set<HKObjectType> = [HKCategoryType(.sleepAnalysis), HKObjectType.workoutType()]
         for (type, _, _, _) in quantityTypes { read.insert(type) }
-        try await store.requestAuthorization(toShare: [], read: read)
+        do {
+            try await store.requestAuthorization(toShare: [], read: read)
+        } catch let error as NSError where error.domain == HKErrorDomain && error.localizedDescription.localizedCaseInsensitiveContains("entitlement") {
+            throw HealthAccessError.notEntitled
+        }
     }
 
     func dailyMetrics(from start: Date, to end: Date) async throws -> [DailyMetric] {

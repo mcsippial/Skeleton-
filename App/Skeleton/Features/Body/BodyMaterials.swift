@@ -8,25 +8,22 @@ enum BodyMaterials {
         var m = PhysicallyBasedMaterial()
         switch layer {
         case .skin:
-            // Clear glass skin. RealityKit's PBR material has no thin-film iridescence, so the
-            // iridescent sheen comes from clearcoat + a cool sheen tint for now; a ShaderGraph
-            // thin-film material can replace this later without touching callers.
-            m.baseColor = .init(tint: UIColor(red: 0.97, green: 0.97, blue: 0.98, alpha: 1))
-            m.roughness = .init(floatLiteral: 0.12)
+            // Clear glass skin: near-white with a light clearcoat. Sheen and a high specular gave the
+            // skin a yellow cast in the Simulator, so they're left off. A ShaderGraph thin-film
+            // material can add true iridescence later without touching callers.
+            m.baseColor = .init(tint: UIColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 1))
+            m.roughness = .init(floatLiteral: 0.32)
             m.metallic = .init(floatLiteral: 0)
-            m.clearcoat = .init(floatLiteral: 1)
-            m.clearcoatRoughness = .init(floatLiteral: 0.08)
-            m.specular = .init(floatLiteral: 0.8)
-            m.sheen = .init(tint: UIColor(red: 0.75, green: 0.85, blue: 1, alpha: 1))
+            m.clearcoat = .init(floatLiteral: 0.6)
+            m.clearcoatRoughness = .init(floatLiteral: 0.15)
             if skinOpacity < 0.92 {
                 m.blending = .transparent(opacity: .init(floatLiteral: max(skinOpacity, 0)))
             }
         case .muscles:
             m.baseColor = .init(tint: UIColor(hex: 0xC9564C))
-            m.roughness = .init(floatLiteral: 0.42)
-            m.clearcoat = .init(floatLiteral: 0.4)
+            m.roughness = .init(floatLiteral: 0.45)
+            m.clearcoat = .init(floatLiteral: 0.3)
             m.clearcoatRoughness = .init(floatLiteral: 0.4)
-            m.sheen = .init(tint: UIColor(hex: 0xFFB3A8))
         case .tendons:
             m.baseColor = .init(tint: UIColor(hex: 0xF2EFE6))
             m.roughness = .init(floatLiteral: 0.35)
