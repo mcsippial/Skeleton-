@@ -121,3 +121,69 @@ public enum EdgeWire {
         }
     }
 }
+
+public extension EdgeWire {
+    // MARK: pain-insight
+
+    struct PainInsightWireRequest: Encodable, Sendable {
+        struct Region: Encodable, Sendable { let id: String; let name: String }
+        struct Answer: Encodable, Sendable { let question: String; let answer: String }
+        struct Pain: Encodable, Sendable {
+            let regions: [Region]; let pain_type: String; let intensity: Int; let onset_at: String
+            let pattern: String?; let triggers: [String]; let relievers: [String]; let notes: String?
+            let answers: [Answer]
+        }
+        struct Candidate: Encodable, Sendable { let id: String; let name: String; let explanation: String; let why: [String] }
+        struct Spread: Encodable, Sendable { let to: [String]; let explanation: String }
+        struct Flag: Encodable, Sendable { let id: String; let title: String }
+        struct Past: Encodable, Sendable { let onset_at: String; let pain_type: String; let intensity: Int; let notes: String? }
+        struct Other: Encodable, Sendable { let onset_at: String; let regions: [String]; let pain_type: String; let intensity: Int }
+        struct Guide: Encodable, Sendable { let area: String; let self_care: [String]; let avoid: [String]; let see_someone_if: [String]; let specialist: String }
+        struct Demo: Encodable, Sendable { let age: Int?; let sex: String; let activity_level: String?; let history: [String] }
+        struct Health: Encodable, Sendable { let metric: String; let summary: String }
+
+        let pain: Pain
+        let candidates: [Candidate]
+        let spread: [Spread]
+        let warning_signs: [String]
+        let red_flags: [Flag]
+        let history: [Past]
+        let other_recent: [Other]
+        let linked_pattern: String?
+        let guide: Guide?
+        let demographics: Demo?
+        let health_context: [Health]
+
+        public init(_ r: PainInsightRequest, atlas: BodyAtlas, medicalHistory: [String] = []) {
+            let iso = ISO8601DateFormatter()
+            func cap(_ s: String, _ n: Int = 300) -> String { String(s.prefix(n)) }
+            let e = r.entry
+            pain = Pain(regions: e.regionIDs.prefix(12).map { Region(id: $0, name: atlas.region($0)?.name ?? $0) },
+                        pain_type: e.painType.rawValue, intensity: e.intensity, onset_at: iso.string(from: e.onsetAt),
+                        pattern: e.pattern?.rawValue, triggers: e.triggers.prefix(20).map { cap($0) },
+                        relievers: e.relievers.prefix(20).map { cap($0) }, notes: e.notes.map { cap($0, 2000) },
+                        answers: (e.clarifications ?? []).prefix(10).map { Answer(question: cap($0.question), answer: $0.answer.rawValue) })
+            candidates = r.candidates.map { Candidate(id: $0.id, name: $0.name, explanation: cap($0.explanation, 1000), why: $0.why.map { cap($0) }) }
+            spread = r.spread.map { Spread(to: $0.toRegionNames, explanation: cap($0.explanation, 1000)) }
+            warning_signs = r.warningSigns.prefix(20).map { cap($0) }
+            red_flags = r.redFlags.map { Flag(id: $0.id, title: $0.title) }
+            history = r.history.prefix(20).map { Past(onset_at: iso.string(from: $0.onsetAt), pain_type: $0.painType.rawValue, intensity: $0.intensity, notes: $0.notes.map { cap($0, 500) }) }
+            other_recent = r.otherRecent.prefix(20).map { o in
+                Other(onset_at: iso.string(from: o.onsetAt), regions: o.regionIDs.prefix(6).map { atlas.region($0)?.name ?? $0 },
+                      pain_type: o.painType.rawValue, intensity: o.intensity)
+            }
+            linked_pattern = r.linkedEpisode.map { cap($0.title) }
+            guide = r.guide.map { Guide(area: $0.title, self_care: $0.selfCare, avoid: $0.avoid, see_someone_if: $0.seeSomeoneIf, specialist: $0.specialist) }
+            demographics = r.demographics.map {
+                Demo(age: $0.age, sex: $0.sex.rawValue, activity_level: $0.activityLevel, history: medicalHistory.prefix(20).map { cap($0) })
+            }
+            health_context = r.healthContext.prefix(10).map { Health(metric: cap($0.metric), summary: cap($0.summary)) }
+        }
+    }
+
+    struct PainInsightWireResponse: Decodable, Sendable {
+        public let insight: AIPainInsightOutput
+        public let model: String
+        public let cached: Bool?
+    }
+}

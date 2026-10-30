@@ -41,6 +41,8 @@ public struct PainEntry: Codable, Sendable, Identifiable, Hashable {
     public var inputMethod: InputMethod
     public var rawText: String?
     public var createdAt: Date
+    /// Answers to the insight's follow-up questions.
+    public var clarifications: [Clarification]?
 
     public init(id: UUID = UUID(), userID: UUID, regionIDs: [String], surfacePoint: SurfacePoint? = nil,
                 painType: PainType, intensity: Int, onsetAt: Date, pattern: PainPattern? = nil,
@@ -67,7 +69,7 @@ public struct PainEntry: Codable, Sendable, Identifiable, Hashable {
         case id, intensity, pattern, triggers, relievers, symptoms, notes
         case userID = "user_id", regionIDs = "region_ids", surfacePoint = "surface_point"
         case painType = "pain_type", onsetAt = "onset_at", inputMethod = "input_method"
-        case rawText = "raw_text", createdAt = "created_at"
+        case rawText = "raw_text", createdAt = "created_at", clarifications
     }
 
     /// What the rules layer sees.

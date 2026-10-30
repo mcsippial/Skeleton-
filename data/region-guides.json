@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "description": "Region guides for single-pain insights. The rules layer scores each guide's contributors against what the person logged (pain type, triggers they ticked, words in their notes, pattern, age, sex, recurrence, health data, answers to follow-up questions) and passes the ranked candidates to Claude, which may only explain within them. Wording is deliberately 'often linked to', never a diagnosis.",
+  "description": "Region guides for single-pain insights. The rules layer scores each guide's contributors against what the person logged (pain type, triggers they ticked, words in their notes, pattern, age, sex, recurrence, health data, answers to follow-up questions) and passes the ranked candidates to Claude, which may only explain within them. Wording is deliberately 'often linked to', never a diagnosis. Contributors marked always_ask have their question offered whenever they apply, because the answer rules an important possibility in or out.",
   "scoring": {
     "pain_type": 0.15,
     "trigger": 0.2,
@@ -16,7 +16,8 @@
       "low_sleep": "average sleep in the 3 days before onset ≥15% below usual",
       "low_hrv": "average HRV in the 3 days before onset ≥15% below usual",
       "workout_spike": "workout minutes in the 3 days before onset ≥50% above usual"
-    }
+    },
+    "pain_type_mismatch": -0.1
   },
   "sources": {
     "nhs_headaches": "NHS: Tension headaches (nhs.uk/conditions/tension-headaches)",
@@ -177,7 +178,8 @@
               "jaw"
             ]
           },
-          "ask": "Do you clench your jaw or grind your teeth?"
+          "ask": "Do you clench your jaw or grind your teeth?",
+          "always_ask": true
         },
         {
           "id": "head.hydration",
@@ -329,7 +331,8 @@
               "sweet"
             ]
           },
-          "ask": "Is one tooth sensitive to hot, cold or biting?"
+          "ask": "Is one tooth sensitive to hot, cold or biting?",
+          "always_ask": true
         },
         {
           "id": "jaw.ear",
@@ -470,7 +473,8 @@
               "numb"
             ]
           },
-          "ask": "Does it travel into your shoulder, arm or hand, or come with tingling?"
+          "ask": "Does it travel into your shoulder, arm or hand, or come with tingling?",
+          "always_ask": true
         },
         {
           "id": "neck.stress",
@@ -582,7 +586,8 @@
               "arm"
             ]
           },
-          "ask": "Is your neck stiff or sore too?"
+          "ask": "Is your neck stiff or sore too?",
+          "always_ask": true
         },
         {
           "id": "shoulder.strain",
@@ -962,7 +967,8 @@
               "burning"
             ]
           },
-          "ask": "Any burning when you pee, or needing to go more often?"
+          "ask": "Any burning when you pee, or needing to go more often?",
+          "always_ask": true
         }
       ],
       "self_care": [
@@ -1037,7 +1043,8 @@
               "kidney"
             ]
           },
-          "ask": "Is it with fever, or pain or changes when you pee?"
+          "ask": "Is it with fever, or pain or changes when you pee?",
+          "always_ask": true
         },
         {
           "id": "flank.posture",
@@ -1152,7 +1159,8 @@
               "sciatica"
             ]
           },
-          "ask": "Does it travel into your buttock or down your leg, or come with tingling?"
+          "ask": "Does it travel into your buttock or down your leg, or come with tingling?",
+          "always_ask": true
         },
         {
           "id": "lower_back.joint",
@@ -1307,7 +1315,8 @@
               "sciatica"
             ]
           },
-          "ask": "Does it travel down the back of your leg or come with tingling?"
+          "ask": "Does it travel down the back of your leg or come with tingling?",
+          "always_ask": true
         },
         {
           "id": "si.pregnancy",
@@ -1439,7 +1448,8 @@
               "back"
             ]
           },
-          "ask": "Is your lower back sore too?"
+          "ask": "Is your lower back sore too?",
+          "always_ask": true
         }
       ],
       "self_care": [
@@ -1534,7 +1544,8 @@
               "back"
             ]
           },
-          "ask": "Have you had lower back pain recently?"
+          "ask": "Have you had lower back pain recently?",
+          "always_ask": true
         },
         {
           "id": "groin.hernia",
@@ -1552,7 +1563,8 @@
               "swelling"
             ]
           },
-          "ask": "Is there a lump or bulge that's sore when you cough or lift?"
+          "ask": "Is there a lump or bulge that's sore when you cough or lift?",
+          "always_ask": true
         }
       ],
       "self_care": [
@@ -1655,7 +1667,8 @@
               "back"
             ]
           },
-          "ask": "Is there tingling, numbness or burning?"
+          "ask": "Is there tingling, numbness or burning?",
+          "always_ask": true
         },
         {
           "id": "thigh.it_band",
@@ -1787,7 +1800,8 @@
               "pop"
             ]
           },
-          "ask": "Did you twist it, or does it click, lock, give way or swell?"
+          "ask": "Did you twist it, or does it click, lock, give way or swell?",
+          "always_ask": true
         },
         {
           "id": "knee.wear",
@@ -1883,7 +1897,8 @@
               "jump"
             ]
           },
-          "ask": "Did you feel a sudden pull during sport?"
+          "ask": "Did you feel a sudden pull during sport?",
+          "always_ask": true
         },
         {
           "id": "lower_leg.cramp",
@@ -2017,7 +2032,8 @@
               "swollen"
             ]
           },
-          "ask": "Did you roll or twist your ankle?"
+          "ask": "Did you roll or twist your ankle?",
+          "always_ask": true
         },
         {
           "id": "foot.footwear",
@@ -2139,7 +2155,8 @@
               "fingers"
             ]
           },
-          "ask": "Is there tingling or numbness, or neck pain too?"
+          "ask": "Is there tingling or numbness, or neck pain too?",
+          "always_ask": true
         }
       ],
       "self_care": [
@@ -2218,7 +2235,8 @@
               "bent"
             ]
           },
-          "ask": "Do your ring or little fingers tingle?"
+          "ask": "Do your ring or little fingers tingle?",
+          "always_ask": true
         },
         {
           "id": "elbow.knock",
@@ -2312,7 +2330,8 @@
               "fingers"
             ]
           },
-          "ask": "Do your thumb and first fingers tingle, especially at night?"
+          "ask": "Do your thumb and first fingers tingle, especially at night?",
+          "always_ask": true
         },
         {
           "id": "hand.joint",

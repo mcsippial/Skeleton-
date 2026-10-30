@@ -153,30 +153,9 @@ public struct Insight: Sendable, Hashable {
 public struct InsightValidator: Sendable {
     public init() {}
 
-    static let diagnosis = [#"\byou (have|'ve got|have got)\b"#, #"\bdiagnos(is|ed|e)\b"#, #"\byou are suffering from\b"#,
-                            #"\b(this|it) is (definitely|certainly|clearly)\b"#, #"\bconfirms?\b"#]
-    static let medication = [#"\b\d+(\.\d+)?\s?(mg|mcg|µg|g|ml|iu|units?)\b"#, #"\bdos(e|es|age|ing)\b"#, #"\btake \d"#,
-                             #"\b(ibuprofen|paracetamol|acetaminophen|naproxen|aspirin|diclofenac|codeine|tramadol|opioids?|muscle relaxants?|steroids?)\b"#]
-    static let softening = [#"\bnothing to worry about\b"#, #"\bnot (serious|urgent|an emergency)\b"#, #"\bno need to (see|call|seek)\b"#,
-                            #"\b(probably|likely) (fine|harmless|benign)\b"#, #"\bcan wait\b"#]
-    static let femaleOnly = [#"\b(ovar|uter|menstru|endometri|pregnan|cervix)"#]
-    static let maleOnly = [#"\b(testic|testes|prostat|scrot)"#]
-
-    static func matches(_ text: String, _ patterns: [String]) -> Bool {
-        let lower = text.lowercased()
-        return patterns.contains { lower.range(of: $0, options: .regularExpression) != nil }
-    }
-
     func isAllowed(_ text: String, request: InsightRequest, allowDiagnosisWord: Bool = false) -> Bool {
-        var banned = Self.medication
-        if !allowDiagnosisWord { banned += Self.diagnosis } else { banned.append(Self.diagnosis[0]) }
-        if !request.redFlags.isEmpty { banned += Self.softening }
-        switch request.demographics?.sex {
-        case .male?: banned += Self.femaleOnly
-        case .female?: banned += Self.maleOnly
-        default: break
-        }
-        return !Self.matches(text, banned)
+        SafetyFilter(redFlagsPresent: !request.redFlags.isEmpty, sex: request.demographics?.sex)
+            .isAllowed(text, allowDiagnosisWord: allowDiagnosisWord)
     }
 
     public func validate(_ output: AIInsightOutput, request: InsightRequest, modelVersion: String) -> Insight {
@@ -261,5 +240,44 @@ public struct InsightEngine: Sendable {
         let req = request(for: episode, entries: entries, demographics: demographics, metrics: metrics)
         let result = try await provider.insight(for: req)
         return InsightValidator().validate(result.output, request: req, modelVersion: result.model)
+    }
+}
+
+/// Wording rules every AI text must pass before anyone sees it (CLAUDE.md §8): no diagnosis,
+/// no medication or dosing, nothing that doesn't fit the person's sex, and nothing that plays
+/// down urgency when a red flag matched.
+public struct SafetyFilter: Sendable {
+    public var redFlagsPresent: Bool
+    public var sex: BiologicalSex?
+
+    public init(redFlagsPresent: Bool, sex: BiologicalSex?) {
+        self.redFlagsPresent = redFlagsPresent
+        self.sex = sex
+    }
+
+    static let diagnosis = [#"\byou (have|'ve got|have got)\b"#, #"\bdiagnos(is|ed|e)\b"#, #"\byou are suffering from\b"#,
+                            #"\b(this|it) is (definitely|certainly|clearly)\b"#, #"\bconfirms?\b"#]
+    static let medication = [#"\b\d+(\.\d+)?\s?(mg|mcg|µg|g|ml|iu|units?)\b"#, #"\bdos(e|es|age|ing)\b"#, #"\btake \d"#,
+                             #"\b(ibuprofen|paracetamol|acetaminophen|naproxen|aspirin|diclofenac|codeine|tramadol|opioids?|muscle relaxants?|steroids?)\b"#]
+    static let softening = [#"\bnothing to worry about\b"#, #"\bnot (serious|urgent|an emergency)\b"#, #"\bno need to (see|call|seek)\b"#,
+                            #"\b(probably|likely) (fine|harmless|benign)\b"#, #"\bcan wait\b"#]
+    static let femaleOnly = [#"\b(ovar|uter|menstru|endometri|pregnan|cervix)"#]
+    static let maleOnly = [#"\b(testic|testes|prostat|scrot)"#]
+
+    static func matches(_ text: String, _ patterns: [String]) -> Bool {
+        let lower = text.lowercased()
+        return patterns.contains { lower.range(of: $0, options: .regularExpression) != nil }
+    }
+
+    public func isAllowed(_ text: String, allowDiagnosisWord: Bool = false) -> Bool {
+        var banned = Self.medication
+        if !allowDiagnosisWord { banned += Self.diagnosis } else { banned.append(Self.diagnosis[0]) }
+        if redFlagsPresent { banned += Self.softening }
+        switch sex {
+        case .male?: banned += Self.femaleOnly
+        case .female?: banned += Self.maleOnly
+        default: break
+        }
+        return !Self.matches(text, banned)
     }
 }

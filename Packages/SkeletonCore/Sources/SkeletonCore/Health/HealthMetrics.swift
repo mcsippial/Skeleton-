@@ -99,6 +99,28 @@ public enum HealthSummary {
         return out
     }
 
+    /// Health signals for the rules layer: what stood out in the days before a pain started.
+    /// `low_sleep` / `low_hrv`: ≥15% below usual; `workout_spike`: ≥50% more workout time than usual.
+    public static func signals(before onset: Date, in metrics: [DailyMetric], calendar: Calendar = .current,
+                               leadDays: Int = 3, baselineDays: Int = 21) -> Set<String> {
+        let onsetDay = calendar.startOfDay(for: onset)
+        guard let leadStart = calendar.date(byAdding: .day, value: -leadDays, to: onsetDay),
+              let baseStart = calendar.date(byAdding: .day, value: -baselineDays, to: leadStart) else { return [] }
+        func avg(_ kind: HealthMetricKind, _ from: Date, _ to: Date, inclusive: Bool) -> Double? {
+            let v = metrics.filter { $0.kind == kind && $0.day >= from && (inclusive ? $0.day <= to : $0.day < to) }.map(\.value)
+            return v.isEmpty ? nil : v.reduce(0, +) / Double(v.count)
+        }
+        // The days before onset (not the onset day itself) vs the usual before that.
+        var out = Set<String>()
+        if let lead = avg(.sleepHours, leadStart, onsetDay, inclusive: false), let base = avg(.sleepHours, baseStart, leadStart, inclusive: false),
+           lead <= base * 0.85 { out.insert("low_sleep") }
+        if let lead = avg(.hrv, leadStart, onsetDay, inclusive: false), let base = avg(.hrv, baseStart, leadStart, inclusive: false),
+           lead <= base * 0.85 { out.insert("low_hrv") }
+        if let lead = avg(.workoutMinutes, leadStart, onsetDay, inclusive: false), let base = avg(.workoutMinutes, baseStart, leadStart, inclusive: false),
+           lead >= max(base * 1.5, 20) { out.insert("workout_spike") }
+        return out
+    }
+
     /// Value for one metric on one day, if recorded.
     public static func value(_ kind: HealthMetricKind, on day: Date, in metrics: [DailyMetric], calendar: Calendar = .current) -> Double? {
         let d = calendar.startOfDay(for: day)
@@ -114,8 +136,8 @@ public enum HealthSummary {
     }
 }
 
-/// Plausible demo health data: short sleep and lower HRV in the nights before each demo pain
-/// started, and a hard workout the day before the lower-back pain.
+/// Plausible demo health data: short sleep and lower HRV in the three nights before each pain
+/// started, and a hard workout the day before each one.
 public enum DemoHealth {
     public static func metrics(now: Date = Date(), entries: [PainEntry], days: Int = 45, calendar: Calendar = .current) -> [DailyMetric] {
         let today = calendar.startOfDay(for: now)
@@ -124,10 +146,11 @@ public enum DemoHealth {
         var out: [DailyMetric] = []
         for i in stride(from: days, through: 0, by: -1) {
             guard let day = calendar.date(byAdding: .day, value: -i, to: today) else { continue }
-            let next1 = calendar.date(byAdding: .day, value: 1, to: day)!, next2 = calendar.date(byAdding: .day, value: 2, to: day)!
-            let beforePain = onsetDays.contains(next1) || onsetDays.contains(next2)
+            let next = (1...3).map { calendar.date(byAdding: .day, value: $0, to: day)! }
+            let next1 = next[0]
+            let beforePain = next.contains { onsetDays.contains($0) }
             let jitter = { (scale: Double) in (Double(rng.next() % 1000) / 1000 - 0.5) * scale }
-            out.append(.init(kind: .sleepHours, day: day, value: (beforePain ? 5.6 : 7.3) + jitter(0.8)))
+            out.append(.init(kind: .sleepHours, day: day, value: (beforePain ? 5.4 : 7.3) + jitter(0.6)))
             out.append(.init(kind: .hrv, day: day, value: (beforePain ? 38 : 54) + jitter(8)))
             out.append(.init(kind: .restingHeartRate, day: day, value: (beforePain ? 62 : 56) + jitter(4)))
             out.append(.init(kind: .steps, day: day, value: 8200 + jitter(5000)))

@@ -90,6 +90,8 @@ public struct SkeletonData: Sendable {
     public let redFlags: RedFlagLibrary
     /// Sculpted stock-body skin; nil falls back to capsule skin.
     public var skin: MeshData?
+    /// Region guides for single-pain insights (`region-guides.json`).
+    public var guides: RegionGuideLibrary?
 
     public init(atlas: Data, pathways: Data, redFlags: Data) throws {
         self.atlas = try BodyAtlas.load(from: atlas)
@@ -103,5 +105,6 @@ public struct SkeletonData: Sendable {
                       pathways: Data(contentsOf: directory.appendingPathComponent("pain-pathways.json")),
                       redFlags: Data(contentsOf: directory.appendingPathComponent("red-flags.json")))
         skin = (try? Data(contentsOf: directory.appendingPathComponent("stock-body-skin.bin"))).flatMap { try? MeshData.fromSkinBinary($0) }
+        guides = try RegionGuideLibrary.load(from: Data(contentsOf: directory.appendingPathComponent("region-guides.json")))
     }
 }
