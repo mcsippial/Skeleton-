@@ -15,6 +15,8 @@ final class AppModel {
     /// Cause-engine AI and text parser: Edge Functions (Claude) in live mode, on-device mocks otherwise.
     let insights: any InsightProvider
     let parser: any TextPainParser
+    /// Shareable report links (live mode only; demo mode shares the file itself).
+    let reportLinks: (any ReportLinkService)?
     let data: SkeletonData
 
     private(set) var user: AppUser?
@@ -43,7 +45,9 @@ final class AppModel {
             profiles = SupabaseProfileRepository(client: client)
             insights = EdgeInsightProvider(client: client, atlas: data.atlas)
             parser = EdgeTextPainParser(client: client, atlas: data.atlas, fallback: MockTextPainParser(atlas: data.atlas))
+            reportLinks = SupabaseReportLinkService(client: client)
         } else {
+            reportLinks = nil
             auth = MockAuthService()
             pain = MockPainRepository()
             profiles = MockProfileRepository()
@@ -51,6 +55,7 @@ final class AppModel {
             parser = MockTextPainParser(atlas: data.atlas)
         }
         #else
+        reportLinks = nil
         auth = MockAuthService()
         pain = MockPainRepository()
         profiles = MockProfileRepository()

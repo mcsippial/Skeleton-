@@ -282,7 +282,14 @@ struct BodyMapCanvas: View {
 
 struct DoctorReportSheet: View {
     let url: URL
+    let links: (any ReportLinkService)?
+    let userID: UUID
     @Environment(\.dismiss) private var dismiss
+    @State private var link: URL?
+    @State private var linkBusy = false
+    @State private var linkError: String?
+
+    static let linkDays = 7
 
     var body: some View {
         VStack(spacing: Theme.Spacing.m) {
@@ -295,9 +302,35 @@ struct DoctorReportSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.small, style: .continuous))
                 .shadow(color: .black.opacity(0.08), radius: 10, y: 4)
             ShareLink(item: url) {
-                Label("Share or print", systemImage: "square.and.arrow.up")
+                Label("Share or print PDF", systemImage: "square.and.arrow.up")
             }
             .buttonStyle(.primaryPill)
+            if let links {
+                if let link {
+                    ShareLink(item: link, message: Text("My pain report from Skeleton (link expires in \(Self.linkDays) days)")) {
+                        Label("Send link (expires in \(Self.linkDays) days)", systemImage: "link")
+                    }
+                    .buttonStyle(.secondaryPill)
+                } else {
+                    Button(linkBusy ? "Creating link…" : "Create a private link") {
+                        linkBusy = true
+                        linkError = nil
+                        Task {
+                            defer { linkBusy = false }
+                            do {
+                                link = try await links.link(for: url, userID: userID, validFor: Self.linkDays * 86_400)
+                            } catch {
+                                linkError = "Couldn't create the link. \(error.localizedDescription)"
+                            }
+                        }
+                    }
+                    .buttonStyle(.secondaryPill)
+                    .disabled(linkBusy)
+                }
+                if let linkError {
+                    Text(linkError).font(Theme.Font.caption).foregroundStyle(Theme.Color.redFlag)
+                }
+            }
             Text("Your health data. Only share it with people you trust, such as your doctor or physical therapist.")
                 .font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
         }

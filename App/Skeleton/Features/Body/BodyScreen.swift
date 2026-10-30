@@ -39,7 +39,7 @@ struct BodyScreen: View {
         .sheet(isPresented: $showGallery) { DesignGalleryView(data: app.data) }
         .sheet(isPresented: Binding(get: { reportURL != nil }, set: { if !$0 { reportURL = nil } })) {
             if let url = reportURL {
-                DoctorReportSheet(url: url)
+                DoctorReportSheet(url: url, links: app.reportLinks, userID: profile.userID)
                     .presentationBackground { GlowBackground() }
             }
         }
