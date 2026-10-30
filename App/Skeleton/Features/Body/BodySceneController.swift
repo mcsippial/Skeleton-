@@ -133,9 +133,9 @@ final class BodySceneController {
     private func addLights(height: Float) {
         let target = SIMD3<Float>(0, 0.95 * height, 0)
         let lights: [(SIMD3<Float>, UIColor, Float)] = [
-            (SIMD3(2, 3, 2), .white, 2600),                                   // key
-            (SIMD3(-2, 1.5, 2), .white, 1000),                                // fill
-            (SIMD3(-1, 2, -3), UIColor(red: 0.73, green: 0.84, blue: 1, alpha: 1), 1500), // cool rim
+            (SIMD3(2, 3, 2), .rgbWhite, 4000),                                // key
+            (SIMD3(-2, 1.5, 2), .rgbWhite, 1800),                             // fill
+            (SIMD3(-1, 2, -3), UIColor(red: 0.73, green: 0.84, blue: 1, alpha: 1), 2000), // cool rim
         ]
         for (position, color, intensity) in lights {
             let light = DirectionalLight()
@@ -162,7 +162,7 @@ final class BodySceneController {
               let env = try? await EnvironmentResource(equirectangular: image) else { return nil }
         let entity = Entity()
         entity.name = "ibl"
-        entity.components.set(ImageBasedLightComponent(source: .single(env), intensityExponent: 0.4))
+        entity.components.set(ImageBasedLightComponent(source: .single(env), intensityExponent: 0.8))
         return entity
     }
 
@@ -171,13 +171,14 @@ final class BodySceneController {
         guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
                                   space: CGColorSpaceCreateDeviceRGB(),
                                   bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
-        let colors = [UIColor.white.cgColor, UIColor(white: 0.93, alpha: 1).cgColor, UIColor(white: 0.78, alpha: 1).cgColor] as CFArray
+        let colors = [UIColor.rgbWhite.cgColor, UIColor(red: 0.93, green: 0.93, blue: 0.94, alpha: 1).cgColor,
+                      UIColor(red: 0.78, green: 0.78, blue: 0.8, alpha: 1).cgColor] as CFArray
         if let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 0.5, 1]) {
             // CoreGraphics' origin is bottom-left: top of the image (sky) is y = h.
             ctx.drawLinearGradient(g, start: CGPoint(x: 0, y: h), end: CGPoint(x: 0, y: 0), options: [])
         }
         // Two soft-box highlights for crisp clearcoat reflections.
-        ctx.setFillColor(UIColor.white.cgColor)
+        ctx.setFillColor(UIColor.rgbWhite.cgColor)
         ctx.fillEllipse(in: CGRect(x: 40, y: 80, width: 50, height: 26))
         ctx.fillEllipse(in: CGRect(x: 170, y: 86, width: 36, height: 18))
         return ctx.makeImage()

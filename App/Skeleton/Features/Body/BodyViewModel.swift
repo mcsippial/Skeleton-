@@ -14,7 +14,7 @@ final class BodyViewModel {
     private(set) var tooltip: (title: String, subtitle: String)?
     private(set) var flashID: String?
 
-    private(set) var camera = OrbitCamera(target: Vec3(0, 0.95, 0), yaw: 0.6, pitch: 0.12, distance: 2.6)
+    private(set) var camera = OrbitCamera(target: Vec3(0, 0.88, 0), yaw: 0.6, pitch: 0.08, distance: 3.5)
     private(set) var cameraRevision = 0
     private(set) var cameraAnimated = false
     private(set) var preset: ViewPreset = .front
@@ -34,8 +34,8 @@ final class BodyViewModel {
         let atlas = data.atlas
         let body = await Task.detached(priority: .userInitiated) { StockBody(atlas: atlas, morph: morph) }.value
         stockBody = body
-        setCamera(OrbitCamera(target: Vec3(0, 0.95 * morph.heightScale, 0), yaw: 0.6, pitch: 0.12,
-                              distance: 2.6 * morph.heightScale), animated: false)
+        setCamera(OrbitCamera(target: Vec3(0, 0.88 * morph.heightScale, 0), yaw: 0.6, pitch: 0.08,
+                              distance: 3.5 * morph.heightScale), animated: false)
     }
 
     var sceneState: BodySceneController.State {
@@ -75,7 +75,7 @@ final class BodyViewModel {
 
     func resetCamera() {
         let h = stockBody?.morph.heightScale ?? 1
-        setCamera(OrbitCamera(target: Vec3(0, 0.95 * h, 0), yaw: preset.yaw, pitch: 0.12, distance: 2.6 * h), animated: true)
+        setCamera(OrbitCamera(target: Vec3(0, 0.88 * h, 0), yaw: preset.yaw, pitch: 0.08, distance: 3.5 * h), animated: true)
     }
 
     func select(_ newPreset: ViewPreset) {
@@ -87,10 +87,10 @@ final class BodyViewModel {
     private func glide(yaw: Float) {
         var c = camera
         c.yaw = yaw
-        c.pitch = 0.12
+        c.pitch = 0.08
         let h = stockBody?.morph.heightScale ?? 1
-        c.target = Vec3(0, 0.95 * h, 0)
-        c.distance = max(c.distance, 2.2 * h)
+        c.target = Vec3(0, 0.88 * h, 0)
+        c.distance = 3.5 * h
         setCamera(c, animated: true)
     }
 

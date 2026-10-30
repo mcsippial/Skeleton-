@@ -11,7 +11,7 @@ enum BodyMaterials {
             // Clear glass skin. RealityKit's PBR material has no thin-film iridescence, so the
             // iridescent sheen comes from clearcoat + a cool sheen tint for now; a ShaderGraph
             // thin-film material can replace this later without touching callers.
-            m.baseColor = .init(tint: UIColor(white: 0.97, alpha: 1))
+            m.baseColor = .init(tint: UIColor(red: 0.97, green: 0.97, blue: 0.98, alpha: 1))
             m.roughness = .init(floatLiteral: 0.12)
             m.metallic = .init(floatLiteral: 0)
             m.clearcoat = .init(floatLiteral: 1)
@@ -61,6 +61,10 @@ enum BodyMaterials {
 }
 
 extension UIColor {
+    /// Always RGB. Greyscale UIColors (`.white`, `UIColor(white:alpha:)`) can be misread by RealityKit
+    /// as RGB components, which tints materials and lights yellow.
+    static let rgbWhite = UIColor(red: 1, green: 1, blue: 1, alpha: 1)
+
     convenience init(hex: UInt32) {
         self.init(red: CGFloat((hex >> 16) & 0xFF) / 255,
                   green: CGFloat((hex >> 8) & 0xFF) / 255,
