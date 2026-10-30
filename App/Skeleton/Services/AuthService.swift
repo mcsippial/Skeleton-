@@ -1,10 +1,11 @@
 import Foundation
+import SkeletonCore
 #if canImport(Supabase)
 import Supabase
 #endif
 
 struct AppUser: Sendable, Equatable {
-    let id: String
+    let id: UUID
     let email: String?
 }
 
@@ -33,14 +34,15 @@ actor MockAuthService: AuthService {
     private var user: AppUser?
 
     init(signedIn: Bool = false) {
-        user = signedIn ? AppUser(id: "demo-user", email: "demo@skeleton.app") : nil
+        user = signedIn ? AppUser(id: DemoData.userID, email: "demo@skeleton.app") : nil
     }
 
     func restoreSession() async -> AppUser? { user }
 
     func signIn(email: String, password: String) async throws -> AppUser {
         guard email.contains("@"), password.count >= 6 else { throw AuthError.invalidCredentials }
-        let u = AppUser(id: "mock-\(email.lowercased())", email: email)
+        // Every mock account is the demo user, so it sees the seeded demo history.
+        let u = AppUser(id: DemoData.userID, email: email)
         user = u
         return u
     }
@@ -57,23 +59,23 @@ actor MockAuthService: AuthService {
 struct SupabaseAuthService: AuthService {
     let client: SupabaseClient
 
-    init(url: URL, anonKey: String) {
-        client = SupabaseClient(supabaseURL: url, supabaseKey: anonKey)
+    init(client: SupabaseClient) {
+        self.client = client
     }
 
     func restoreSession() async -> AppUser? {
         guard let session = try? await client.auth.session else { return nil }
-        return AppUser(id: session.user.id.uuidString, email: session.user.email)
+        return AppUser(id: session.user.id, email: session.user.email)
     }
 
     func signIn(email: String, password: String) async throws -> AppUser {
         let session = try await client.auth.signIn(email: email, password: password)
-        return AppUser(id: session.user.id.uuidString, email: session.user.email)
+        return AppUser(id: session.user.id, email: session.user.email)
     }
 
     func signUp(email: String, password: String) async throws -> AppUser {
         let response = try await client.auth.signUp(email: email, password: password)
-        return AppUser(id: response.user.id.uuidString, email: response.user.email)
+        return AppUser(id: response.user.id, email: response.user.email)
     }
 
     func signOut() async throws {

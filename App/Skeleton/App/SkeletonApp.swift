@@ -22,11 +22,12 @@ struct RootView: View {
             GlowBackground()
             if model.isRestoring {
                 ProgressView()
-            } else if model.user == nil {
-                SignInView()
+            } else if let user = model.user {
+                BodyScreen(data: model.data, pain: model.pain, userID: user.id)
+                    .id(user.id)
                     .transition(.opacity)
             } else {
-                BodyScreen(data: model.data)
+                SignInView()
                     .transition(.opacity)
             }
         }

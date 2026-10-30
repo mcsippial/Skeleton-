@@ -157,3 +157,24 @@ public struct RedFlagEngine: Sendable {
             .sorted { $0.urgency < $1.urgency }
     }
 }
+
+public extension RedFlagLibrary {
+    /// Symptom questions worth asking when logging pain in `regions`: those from clauses tied to
+    /// these regions, plus a few that apply anywhere. Keeps the logging sheet short.
+    func symptoms(relevantTo regions: [String]) -> [RedFlagSymptom] {
+        let selected = Set(regions)
+        var ids: Set<String> = ["significant_trauma", "worsening_despite_rest", "night_pain_every_night"]
+        for rule in rules {
+            func regions(_ c: RedFlagClause) -> [String] { (c.regionsAny ?? []) + (c.painTypesInRegions?.regions ?? []) }
+            // A rule is relevant when any of its clauses is tied to these regions. Then ask about the
+            // symptoms of those clauses and of its region-free clauses (e.g. back pain → saddle numbness).
+            guard rule.clauses.contains(where: { !selected.isDisjoint(with: regions($0)) }) else { continue }
+            for clause in rule.clauses where regions(clause).isEmpty || !selected.isDisjoint(with: regions(clause)) {
+                ids.formUnion(clause.symptomsAny ?? [])
+                ids.formUnion(clause.symptomsAll ?? [])
+            }
+        }
+        // Keep the catalog order (most serious first).
+        return symptoms.filter { ids.contains($0.id) }
+    }
+}

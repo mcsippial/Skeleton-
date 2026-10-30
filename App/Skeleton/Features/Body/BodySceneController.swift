@@ -11,6 +11,9 @@ final class BodySceneController {
     let camera = PerspectiveCamera()
 
     private var structures: [String: (entity: ModelEntity, layer: AnatomyLayer)] = [:]
+    private let spotsRoot = Entity()
+    private var spotEntities: [String: Entity] = [:]
+    private var renderedSpots: [String: SpotRender] = [:]
     private var layerGroups: [AnatomyLayer: Entity] = [:]
     private var applied = AppliedState()
     private var cameraAnimation: AnimationPlaybackController?
@@ -49,6 +52,8 @@ final class BodySceneController {
 
         addLights(height: body.morph.heightScale)
         addFloorRing()
+        spotsRoot.name = "pain-spots"
+        root.addChild(spotsRoot)
 
         camera.camera.fieldOfViewInDegrees = 34
         camera.camera.near = 0.05
@@ -63,6 +68,16 @@ final class BodySceneController {
         var camera: OrbitCamera
         var cameraRevision: Int
         var cameraAnimated: Bool
+        var spots: [SpotRender]
+    }
+
+    /// A glowing pain spot: colour = intensity, pulse = recent. Pending spots (being picked) are white.
+    struct SpotRender: Equatable {
+        var id: String
+        var position: Vec3
+        var intensity: Int
+        var pulses: Bool
+        var isPending: Bool
     }
 
     func update(_ s: State) {
@@ -89,6 +104,8 @@ final class BodySceneController {
             applied.flashID = s.flashID
         }
 
+        updateSpots(s.spots)
+
         if s.cameraRevision != applied.cameraRevision {
             let transform = Self.transform(for: s.camera)
             cameraAnimation?.stop()
@@ -112,6 +129,75 @@ final class BodySceneController {
                               verticalFOVDegrees: camera.camera.fieldOfViewInDegrees,
                               viewSize: (Float(size.width), Float(size.height)),
                               location: (Float(location.x), Float(location.y)))
+    }
+
+    // MARK: - Pain spots
+
+    private func updateSpots(_ spots: [SpotRender]) {
+        let wanted = Dictionary(uniqueKeysWithValues: spots.map { ($0.id, $0) })
+        for (id, entity) in spotEntities where wanted[id] != renderedSpots[id] {
+            entity.removeFromParent()
+            spotEntities[id] = nil
+            renderedSpots[id] = nil
+        }
+        for spot in spots where spotEntities[spot.id] == nil {
+            let entity = Self.makeSpot(spot)
+            spotsRoot.addChild(entity)
+            spotEntities[spot.id] = entity
+            renderedSpots[spot.id] = spot
+        }
+    }
+
+    private static let spotCore = try? MeshResource.generate(from: [spotDescriptor(radius: 0.016, name: "spot-core")])
+    private static let spotHalo = try? MeshResource.generate(from: [spotDescriptor(radius: 0.045, name: "spot-halo")])
+
+    private static func spotDescriptor(radius: Float, name: String) -> MeshDescriptor {
+        let m = MeshBuilder.sphere(radius: radius, segments: 20, rings: 14)
+        var d = MeshDescriptor(name: name)
+        d.positions = MeshBuffers.Positions(m.positions)
+        d.normals = MeshBuffers.Normals(m.normals)
+        d.primitives = .triangles(m.indices)
+        return d
+    }
+
+    private static func makeSpot(_ spot: SpotRender) -> Entity {
+        let group = Entity()
+        group.name = "spot.\(spot.id)"
+        group.position = spot.position
+        guard let coreMesh = spotCore, let haloMesh = spotHalo else { return group }
+
+        let color = spot.isPending ? UIColor.rgbWhite : painColor(spot.intensity)
+        var coreMaterial = UnlitMaterial(color: color)
+        coreMaterial.blending = .transparent(opacity: .init(floatLiteral: 0.95))
+        let core = ModelEntity(mesh: coreMesh, materials: [coreMaterial])
+        let scale = spot.isPending ? 1 : 0.8 + Float(spot.intensity) / 20
+        core.scale = SIMD3(repeating: scale)
+        group.addChild(core)
+
+        var haloMaterial = UnlitMaterial(color: spot.isPending ? UIColor(hex: 0x0B0B0C) : color)
+        haloMaterial.blending = .transparent(opacity: .init(floatLiteral: spot.isPending ? 0.18 : 0.28))
+        let halo = ModelEntity(mesh: haloMesh, materials: [haloMaterial])
+        let haloScale = spot.isPending ? 0.8 : 0.7 + Float(spot.intensity) / 14
+        halo.scale = SIMD3(repeating: haloScale)
+        group.addChild(halo)
+
+        if spot.pulses {
+            // Gentle pulse for recent pain.
+            let pulse = FromToByAnimation<Transform>(
+                from: Transform(scale: SIMD3(repeating: haloScale * 0.85)),
+                to: Transform(scale: SIMD3(repeating: haloScale * 1.25)),
+                duration: 0.9, timing: .easeInOut, bindTarget: .transform, repeatMode: .autoReverse)
+            if let resource = try? AnimationResource.generate(with: pulse) {
+                halo.playAnimation(resource)
+            }
+        }
+        return group
+    }
+
+    /// Amber (low) → red (high), matching `Theme.Color.pain(intensity:)`.
+    static func painColor(_ intensity: Int) -> UIColor {
+        let k = CGFloat(min(max(intensity, 0), 10)) / 10
+        return UIColor(hue: 0.11 - k * 0.11, saturation: 1, brightness: 1, alpha: 1)
     }
 
     // MARK: - Building blocks

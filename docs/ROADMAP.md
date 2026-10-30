@@ -20,14 +20,14 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 
 ### Still to do in Phase 1
 - [ ] Onboarding: demographics → stock body fitted to the profile (currently uses reference proportions)
-- [ ] Profiles + pain entries persisted (Supabase repository + in-memory mock)
-- [ ] Tap logging sheet (type, intensity, onset, pattern, triggers/relievers, notes, red-flag symptom checks), multi-select, < 10 s
+- [x] Pain entries persisted (`PainRepository`: Supabase + in-memory mock); profiles still to do
+- [x] Tap logging sheet (type, intensity, onset, pattern, triggers/relievers, notes, red-flag symptom checks), multi-spot select, live red-flag cards
 - [ ] Text logging with the mock parser → highlight regions → confirm/edit before saving
-- [ ] Heat spots (colour = intensity, pulse = recent), tap a spot → history
+- [x] Heat spots (colour = intensity, pulse = recent), tap a spot → history
 - [ ] Timeline scrubber, flow arcs with moving particles, episodes
 - [ ] Cause engine: rules layer (pathway matcher + red flags are in `SkeletonCore`) + AI interface with mock responses; AI-output validator + tests
 - [ ] Connected structures glow along active pathways (`linked_structures`)
-- [ ] Seed demo user: lower back → groin and jaw → neck histories
+- [x] Seed demo user: lower back → groin and jaw → neck histories (mock repository)
 - [ ] App icon, TestFlight build
 - [ ] Verify on device: RealityView background is transparent over the glow; tune lighting / skin material; consider a ShaderGraph thin-film material for true iridescence
 - [ ] Swap prototype anatomy for Z-Anatomy USDZ layers (prototype only, CC BY-SA) or keep the procedural body until Phase 4

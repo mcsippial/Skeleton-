@@ -5,6 +5,20 @@ import SkeletonCore
 @MainActor @Observable
 final class BodyViewModel {
     let data: SkeletonData
+    let pain: any PainRepository
+    let userID: UUID
+
+    /// All of the user's pain entries, oldest first.
+    private(set) var entries: [PainEntry] = []
+    private(set) var loadError: String?
+    /// Region whose heat spot was tapped (its history shows in the panel).
+    private(set) var selectedSpot: String?
+    /// Regions picked for the entry being logged. Non-nil while logging.
+    private(set) var draftRegions: [String]?
+    private(set) var draftPoint: SurfacePoint?
+    /// True while the user is tapping extra spots for a multi-region entry.
+    private(set) var isPickingSpots = false
+    var isLogSheetPresented = false
 
     private(set) var stockBody: StockBody?
     var visibleLayers = Set(AnatomyLayer.allCases)
@@ -24,8 +38,10 @@ final class BodyViewModel {
     private var tooltipTask: Task<Void, Never>?
     private var flashTask: Task<Void, Never>?
 
-    init(data: SkeletonData) {
+    init(data: SkeletonData, pain: any PainRepository, userID: UUID) {
         self.data = data
+        self.pain = pain
+        self.userID = userID
     }
 
     /// Builds the stock body fitted to the user's proportions off the main thread.
@@ -40,7 +56,117 @@ final class BodyViewModel {
 
     var sceneState: BodySceneController.State {
         .init(visibleLayers: visibleLayers, skinOpacity: Float(skinOpacity), flashID: flashID,
-              camera: camera, cameraRevision: cameraRevision, cameraAnimated: cameraAnimated)
+              camera: camera, cameraRevision: cameraRevision, cameraAnimated: cameraAnimated,
+              spots: spotRenders)
+    }
+
+    // MARK: Pain entries
+
+    func loadEntries() async {
+        do {
+            entries = try await pain.entries()
+            loadError = nil
+        } catch {
+            loadError = "Couldn't load your pain history. \(error.localizedDescription)"
+        }
+    }
+
+    /// One spot per region with pain in the last 14 days.
+    var spots: [PainSpot] { PainSpot.summarize(entries, now: Date()) }
+
+    private var spotRenders: [BodySceneController.SpotRender] {
+        guard let body = stockBody else { return [] }
+        var out = spots.compactMap { s -> BodySceneController.SpotRender? in
+            guard let p = body.anchor(ofRegion: s.regionID) else { return nil }
+            return .init(id: s.regionID, position: p, intensity: s.intensity, pulses: s.isRecent, isPending: false)
+        }
+        for r in draftRegions ?? [] {
+            guard let p = body.anchor(ofRegion: r) else { continue }
+            out.removeAll { $0.id == r }
+            out.append(.init(id: r, position: p, intensity: 0, pulses: true, isPending: true))
+        }
+        return out
+    }
+
+    func entries(inRegion id: String) -> [PainEntry] {
+        entries.filter { $0.regionIDs.contains(id) }.sorted { $0.onsetAt > $1.onsetAt }
+    }
+
+    func regionName(_ id: String) -> String { data.atlas.region(id)?.name ?? id }
+
+    /// Red flags across the last 14 days of entries (and the symptoms ticked on them). Shown first, always.
+    var activeRedFlags: [RedFlagMatch] {
+        redFlags(including: nil)
+    }
+
+    /// Red flags if `draft` were saved now. Rules only; the AI never decides these.
+    func redFlags(including draft: PainEntry?) -> [RedFlagMatch] {
+        let from = Date().addingTimeInterval(-14 * 86_400)
+        var recent = entries.filter { $0.onsetAt > from }
+        if let draft { recent.append(draft) }
+        let events = recent.map(\.event)
+        let links = PathwayMatcher(library: data.pathways, atlas: data.atlas).links(for: events)
+        return RedFlagEngine(library: data.redFlags).evaluate(
+            RedFlagContext(events: events, symptoms: Set(recent.flatMap(\.symptoms))),
+            pathwayLinks: links, pathways: data.pathways)
+    }
+
+    // MARK: Logging
+
+    /// Starts logging from the current tap selection.
+    func startLogging() {
+        guard let s = selection, let region = s.region else { return }
+        draftRegions = [region.id]
+        draftPoint = SurfacePoint(stockBody?.morph.invert(s.point) ?? s.point, atlasVersion: data.atlas.version)
+        isLogSheetPresented = true
+        tooltip = nil
+    }
+
+    func startLogging(region: String) {
+        draftRegions = [region]
+        draftPoint = nil
+        isLogSheetPresented = true
+    }
+
+    /// Closes the sheet so the user can tap more spots on the body.
+    func pickMoreSpots() {
+        isPickingSpots = true
+        isLogSheetPresented = false
+    }
+
+    func finishPicking() {
+        isPickingSpots = false
+        isLogSheetPresented = !(draftRegions ?? []).isEmpty
+        if !isLogSheetPresented { draftRegions = nil }
+    }
+
+    func removeDraftRegion(_ id: String) {
+        draftRegions?.removeAll { $0 == id }
+    }
+
+    func cancelLogging() {
+        draftRegions = nil
+        draftPoint = nil
+        isPickingSpots = false
+        isLogSheetPresented = false
+    }
+
+    func save(_ entry: PainEntry) async throws {
+        try await pain.add(entry)
+        await loadEntries()
+        cancelLogging()
+        selection = nil
+        selectedSpot = entry.regionIDs.first
+    }
+
+    /// Builds an entry from the sheet's answers (not saved).
+    func makeEntry(painType: PainType, intensity: Int, onset: Date, pattern: PainPattern?,
+                   triggers: [String], relievers: [String], symptoms: [String], notes: String) -> PainEntry? {
+        guard let regions = draftRegions, !regions.isEmpty else { return nil }
+        let trimmed = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        return PainEntry(userID: userID, regionIDs: regions, surfacePoint: draftPoint, painType: painType,
+                         intensity: intensity, onsetAt: onset, pattern: pattern, triggers: triggers,
+                         relievers: relievers, symptoms: symptoms, notes: trimmed.isEmpty ? nil : trimmed)
     }
 
     func toggle(_ layer: AnatomyLayer) {
@@ -104,10 +230,30 @@ final class BodyViewModel {
 
     func handleTap(_ ray: Ray) {
         guard let body = stockBody else { return }
+
+        if isPickingSpots {
+            // While picking, any tap toggles the region under the finger (x-ray or not).
+            guard let hit = body.tap(ray, visibleLayers: visibleLayers, skinOpacity: Float(skinOpacity)),
+                  let region = hit.region else { return }
+            if draftRegions?.contains(region.id) == true { removeDraftRegion(region.id) } else { draftRegions?.append(region.id) }
+            showTooltip(title: region.name, subtitle: draftRegions?.contains(region.id) == true ? "Added" : "Removed")
+            return
+        }
+
+        // Heat spots sit on top of the body, so they win.
+        if let spot = nearestSpot(along: ray) {
+            selectedSpot = spot
+            selection = nil
+            let count = entries(inRegion: spot).count
+            showTooltip(title: regionName(spot), subtitle: "\(count) \(count == 1 ? "entry" : "entries")")
+            return
+        }
+
         guard let hit = body.tap(ray, visibleLayers: visibleLayers, skinOpacity: Float(skinOpacity)) else {
             tooltip = nil
             return
         }
+        selectedSpot = nil
         selection = hit
         let region = hit.region?.name ?? "Outside the mapped body"
         showTooltip(title: hit.structureName,
@@ -117,7 +263,18 @@ final class BodyViewModel {
 
     func clearSelection() {
         selection = nil
+        selectedSpot = nil
         tooltip = nil
+    }
+
+    private func nearestSpot(along ray: Ray) -> String? {
+        var best: (String, Float)?
+        for s in spotRenders where !s.isPending {
+            if let t = ray.intersectSphere(center: s.position, radius: 0.035), t < (best?.1 ?? .infinity) {
+                best = (s.id, t)
+            }
+        }
+        return best?.0
     }
 
     private func showTooltip(title: String, subtitle: String) {

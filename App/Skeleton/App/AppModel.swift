@@ -1,12 +1,16 @@
 import Foundation
 import Observation
 import SkeletonCore
+#if canImport(Supabase)
+import Supabase
+#endif
 
 /// App-wide state: configuration, services, shipped data and the signed-in user.
 @MainActor @Observable
 final class AppModel {
     let config: AppConfig
     let auth: any AuthService
+    let pain: any PainRepository
     let data: SkeletonData
 
     private(set) var user: AppUser?
@@ -17,12 +21,16 @@ final class AppModel {
         self.data = AppModel.loadBundledData()
         #if canImport(Supabase)
         if config.serviceMode == .live, let url = config.supabaseURL {
-            auth = SupabaseAuthService(url: url, anonKey: config.supabaseAnonKey)
+            let client = SupabaseClient(supabaseURL: url, supabaseKey: config.supabaseAnonKey)
+            auth = SupabaseAuthService(client: client)
+            pain = SupabasePainRepository(client: client)
         } else {
             auth = MockAuthService()
+            pain = MockPainRepository()
         }
         #else
         auth = MockAuthService()
+        pain = MockPainRepository()
         #endif
     }
 
