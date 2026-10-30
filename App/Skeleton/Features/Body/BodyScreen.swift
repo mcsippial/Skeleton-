@@ -10,6 +10,8 @@ struct BodyScreen: View {
     @State private var panelContentHeight: CGFloat = 0
 
     @State private var showProfile = false
+    @State private var reportURL: URL?
+    @State private var reportError: String?
     private let profile: Profile
 
     init(app: AppModel, profile: Profile) {
@@ -34,6 +36,17 @@ struct BodyScreen: View {
             _ = await (bodyLoad, historyLoad)
         }
         .sheet(isPresented: $showGallery) { DesignGalleryView(data: app.data) }
+        .sheet(isPresented: Binding(get: { reportURL != nil }, set: { if !$0 { reportURL = nil } })) {
+            if let url = reportURL {
+                DoctorReportSheet(url: url)
+                    .presentationBackground { GlowBackground() }
+            }
+        }
+        .alert("Couldn't make the report", isPresented: Binding(get: { reportError != nil }, set: { if !$0 { reportError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(reportError ?? "")
+        }
         .sheet(isPresented: $showProfile) {
             OnboardingView(userID: profile.userID, existing: profile) { showProfile = false }
                 .presentationBackground { GlowBackground() }
@@ -72,6 +85,7 @@ struct BodyScreen: View {
             }
             .buttonStyle(.plain)
             Menu {
+                Button("Doctor report", systemImage: "doc.text") { makeReport() }
                 Button("Edit profile", systemImage: "person.crop.circle") { showProfile = true }
                 Button("Design system", systemImage: "square.grid.2x2") { showGallery = true }
                 Button("Reset view", systemImage: "arrow.counterclockwise") { model.resetCamera() }
@@ -294,6 +308,14 @@ struct BodyScreen: View {
                     .buttonStyle(.secondaryPill)
             }
             .padding(.top, 6)
+        }
+    }
+
+    private func makeReport() {
+        do {
+            reportURL = try model.makeReport(profile: profile)
+        } catch {
+            reportError = error.localizedDescription
         }
     }
 }

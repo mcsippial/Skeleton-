@@ -71,7 +71,7 @@ final class InsightTests: XCTestCase {
 
     func testMockInsightSurvivesValidationUntouched() async throws {
         let req = backRequest()
-        let out = try await MockInsightProvider().insight(for: req)
+        let out = try await MockInsightProvider().insight(for: req).output
         let insight = InsightValidator().validate(out, request: req, modelVersion: "mock")
         XCTAssertEqual(insight.droppedCount, 0)
         XCTAssertFalse(insight.factors.isEmpty)

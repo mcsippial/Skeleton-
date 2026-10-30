@@ -12,7 +12,7 @@ final class AppModel {
     let auth: any AuthService
     let pain: any PainRepository
     let profiles: any ProfileRepository
-    /// Cause-engine AI and text parser. Mocks until the Phase 2 Edge Functions land.
+    /// Cause-engine AI and text parser: Edge Functions (Claude) in live mode, on-device mocks otherwise.
     let insights: any InsightProvider
     let parser: any TextPainParser
     let data: SkeletonData
@@ -33,24 +33,29 @@ final class AppModel {
 
     init(config: AppConfig = .load()) {
         self.config = config
-        self.data = AppModel.loadBundledData()
-        self.insights = MockInsightProvider()
-        self.parser = MockTextPainParser(atlas: data.atlas)
+        let data = AppModel.loadBundledData()
+        self.data = data
         #if canImport(Supabase)
         if config.serviceMode == .live, let url = config.supabaseURL {
             let client = SupabaseClient(supabaseURL: url, supabaseKey: config.supabaseAnonKey)
             auth = SupabaseAuthService(client: client)
             pain = SupabasePainRepository(client: client)
             profiles = SupabaseProfileRepository(client: client)
+            insights = EdgeInsightProvider(client: client, atlas: data.atlas)
+            parser = EdgeTextPainParser(client: client, atlas: data.atlas, fallback: MockTextPainParser(atlas: data.atlas))
         } else {
             auth = MockAuthService()
             pain = MockPainRepository()
             profiles = MockProfileRepository()
+            insights = MockInsightProvider()
+            parser = MockTextPainParser(atlas: data.atlas)
         }
         #else
         auth = MockAuthService()
         pain = MockPainRepository()
         profiles = MockProfileRepository()
+        insights = MockInsightProvider()
+        parser = MockTextPainParser(atlas: data.atlas)
         #endif
     }
 

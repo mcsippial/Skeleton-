@@ -36,3 +36,6 @@ policy = "per_worker"
 
 [functions.parse-pain]
 verify_jwt = true
+
+[functions.cause-engine]
+verify_jwt = true

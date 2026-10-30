@@ -71,6 +71,10 @@ struct InsightCard: View {
     private func content(_ i: Insight) -> some View {
         GlassCard(label: "Pattern found · \(episode.entryIDs.count) linked entries", rainbow: true) {
             Text(i.title).font(.system(size: 17, weight: .semibold)).tracking(-0.2)
+            if i.modelVersion == "rules-only" {
+                Text("AI explanation unavailable right now. This is from Skeleton's pathway library only.")
+                    .font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
+            }
             Text(i.summary).font(Theme.Font.callout).foregroundStyle(Color(hex: 0x2A2A2E))
 
             if !i.factors.isEmpty {

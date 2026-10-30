@@ -50,6 +50,8 @@ targets:
         UIApplicationSupportsIndirectInputEvents: true
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         ITSAppUsesNonExemptEncryption: false
+        NSMicrophoneUsageDescription: Skeleton listens while you describe your pain, so you don't have to type.
+        NSSpeechRecognitionUsageDescription: Your words are turned into text on this iPhone so Skeleton can place the pain on your body. Audio never leaves your device.
         SKSupabaseURL: $(SUPABASE_URL)
         SKSupabaseAnonKey: $(SUPABASE_ANON_KEY)
         SKServiceMode: $(SKELETON_SERVICES)

@@ -34,9 +34,13 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [ ] Swap prototype anatomy for Z-Anatomy USDZ layers (prototype only, CC BY-SA) or keep the procedural body until Phase 4
 
 ## Phase 2 — Real AI + real accounts
-- [ ] Edge Functions for Claude: text parser + cause engine, structured JSON output, validation against atlas / pathways / red flags
-- [ ] Voice input (on-device Speech framework)
-- [ ] Doctor report export (PDF / share link)
+- [x] Edge Functions for Claude: `parse-pain` (text → regions/type/intensity/onset) and `cause-engine` (episode insight), structured JSON output, schema + server-side safety checks, refusal fallback, mock when no key (`AI_PROVIDER`)
+- [x] App calls the functions in live mode; on-device rules run before (matching, red flags) and after (`InsightValidator`); offline/declined → rules-only insight, local parser
+- [x] Voice input (on-device Speech framework; audio never leaves the phone)
+- [x] Doctor report export (PDF: patient summary, red flags, front/back body maps with spots and pathway lines, episodes, full log; share/print)
+- [ ] Connect a Supabase project + Anthropic key and verify end-to-end (steps in `docs/BACKEND.md`)
+- [ ] Shareable report link (upload PDF to private Storage, short-lived signed URL)
+- [ ] Rate limiting per user on the AI functions
 
 ## Phase 3 — Health integrations
 - [ ] Decide Terra vs. Junction

@@ -77,16 +77,19 @@ public struct AIInsightOutput: Codable, Sendable, Hashable {
 }
 
 public protocol InsightProvider: Sendable {
-    var modelVersion: String { get }
-    func insight(for request: InsightRequest) async throws -> AIInsightOutput
+    /// The AI step's raw output and the model that produced it (validated afterwards by `InsightValidator`).
+    func insight(for request: InsightRequest) async throws -> (output: AIInsightOutput, model: String)
 }
 
 /// Stand-in for Claude: builds a plausible answer from the matched pathways and the entries.
 public struct MockInsightProvider: InsightProvider {
     public init() {}
-    public var modelVersion: String { "mock-1" }
 
-    public func insight(for request: InsightRequest) async throws -> AIInsightOutput {
+    public func insight(for request: InsightRequest) async throws -> (output: AIInsightOutput, model: String) {
+        (mockOutput(for: request), "mock-1")
+    }
+
+    func mockOutput(for request: InsightRequest) -> AIInsightOutput {
         let factors = request.pathways.enumerated().map { i, p in
             AIInsightOutput.Factor(title: p.commonContributors.first ?? p.name,
                                    explanation: p.plainExplanation,
@@ -246,7 +249,7 @@ public struct InsightEngine: Sendable {
 
     public func insight(for episode: Episode, entries: [PainEntry], demographics: Demographics? = nil) async throws -> Insight {
         let req = request(for: episode, entries: entries, demographics: demographics)
-        let output = try await provider.insight(for: req)
-        return InsightValidator().validate(output, request: req, modelVersion: provider.modelVersion)
+        let result = try await provider.insight(for: req)
+        return InsightValidator().validate(result.output, request: req, modelVersion: result.model)
     }
 }

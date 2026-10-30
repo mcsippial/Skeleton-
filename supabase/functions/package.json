@@ -1,0 +1,19 @@
+{
+  "name": "skeleton-edge-functions",
+  "private": true,
+  "type": "module",
+  "description": "Node toolchain for unit-testing the Edge Functions' shared code. Deno uses each function's deno.json at runtime.",
+  "scripts": {
+    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.135.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.0",
+    "tsx": "4.20.5",
+    "typescript": "5.9.2"
+  }
+}

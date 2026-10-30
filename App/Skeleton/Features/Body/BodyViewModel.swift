@@ -137,6 +137,8 @@ final class BodyViewModel {
 
     private(set) var selectedEpisode: Episode?
     private(set) var insight: Insight?
+    /// Insights already generated this session, reused by the doctor report.
+    private(set) var insightCache: [String: Insight] = [:]
     private(set) var insightError: String?
     private(set) var isLoadingInsight = false
 
@@ -160,11 +162,38 @@ final class BodyViewModel {
             defer { isLoadingInsight = false }
             do {
                 let result = try await engine.insight(for: episode, entries: all, demographics: demographics)
+                insightCache[episode.id] = result
                 if selectedEpisode?.id == episode.id { insight = result }
             } catch {
-                insightError = "Couldn't build the insight. \(error.localizedDescription)"
+                // The AI step failed (offline, declined, unavailable): show what the rules know on their own.
+                let rulesOnly = InsightEngine(data: data, provider: MockInsightProvider())
+                if var fallback = try? await rulesOnly.insight(for: episode, entries: all, demographics: demographics) {
+                    fallback.modelVersion = "rules-only"
+                    insightCache[episode.id] = fallback
+                    if selectedEpisode?.id == episode.id { insight = fallback }
+                } else {
+                    insightError = "Couldn't build the insight. \(error.localizedDescription)"
+                }
             }
         }
+    }
+
+    /// Builds the doctor report PDF from the current history (rules output + any insights already shown).
+    func makeReport(profile: Profile) throws -> URL {
+        guard let body = stockBody else { throw CocoaError(.fileReadUnknown) }
+        let now = Date()
+        let window = TimeInterval(data.pathways.matching.defaultWindowDays * 86_400)
+        var silhouettes: [BodyProjection.View: [SIMD2<Float>]] = [:]
+        for view in BodyProjection.View.allCases { silhouettes[view] = BodyProjection.silhouette(body.structures, view: view) }
+        var anchors: [String: Vec3] = [:]
+        for r in data.atlas.regions { anchors[r.id] = body.anchor(ofRegion: r.id) }
+        let report = DoctorReportData(
+            profile: profile, entries: entries, episodes: episodes, insights: insightCache,
+            redFlags: activeRedFlags, pathways: data.pathways, atlas: data.atlas,
+            silhouettes: silhouettes, anchors: anchors,
+            arcs: EpisodeBuilder.arcs(entries, matcher: matcher).filter { now.timeIntervalSince($0.appearsAt) <= window },
+            generatedAt: now)
+        return try DoctorReportRenderer.render(report)
     }
 
     func closeEpisode() {
@@ -277,14 +306,14 @@ final class BodyViewModel {
 
     /// Text/voice mode: parse free text, highlight what was understood, and open the sheet to confirm.
     /// Parsed entries are never saved without the user pressing Save.
-    func describe(_ text: String) async -> Bool {
+    func describe(_ text: String, method: InputMethod = .text) async -> Bool {
         guard let parsed = try? await parser.parse(text, now: Date()), !parsed.regionIDs.isEmpty else { return false }
         var f = LogForm()
         f.painType = parsed.painType
         if let i = parsed.intensity { f.intensity = Double(i) }
         if let onset = parsed.onset { f.onset = .pick; f.customOnset = onset }
         f.pattern = parsed.pattern
-        f.inputMethod = .text
+        f.inputMethod = method
         f.rawText = text
         f.notes = text
         form = f

@@ -35,6 +35,16 @@ swift test --package-path Packages/SkeletonCore
 
 They also run from the Skeleton scheme's Test action in Xcode.
 
+## Edge Function tests
+
+```bash
+cd supabase/functions && npm install && npm test
+```
+
+## Real backend and Claude
+
+See [`docs/BACKEND.md`](docs/BACKEND.md).
+
 ## Local backend (optional)
 
 ```bash
