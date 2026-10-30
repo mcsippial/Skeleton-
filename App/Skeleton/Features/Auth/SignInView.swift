@@ -74,6 +74,9 @@ struct SignInView: View {
             defer { busy = false }
             do {
                 try await model.signIn(email: email, password: password, createAccount: createAccount)
+            } catch AuthError.confirmEmail(let address) {
+                self.error = AuthError.confirmEmail(address).localizedDescription
+                createAccount = false
             } catch {
                 self.error = error.localizedDescription
             }

@@ -69,9 +69,7 @@ schemes:
         Skeleton: all
     run:
       config: Debug
-      # mock = demo data on the device; live = the Supabase project (real sign-in, sync, Claude via Edge Functions).
-      environmentVariables:
-        SKELETON_SERVICES: mock
+      # Live vs demo is set by SKELETON_SERVICES in App/Config/*.xcconfig (a scheme env var of the same name overrides it).
     test:
       config: Debug
       targets:

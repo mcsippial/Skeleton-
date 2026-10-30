@@ -338,7 +338,13 @@ final class BodyViewModel {
         await loadEntries()
         cancelLogging()
         selection = nil
-        selectedSpot = entry.regionIDs.first
+        // If this pain links to an earlier one, go straight to the episode's insight.
+        if let episode = episodes.first(where: { $0.entryIDs.contains(entry.id) }) {
+            open(episode)
+        } else {
+            selectedEpisode = nil
+            selectedSpot = entry.regionIDs.first
+        }
     }
 
     /// The entry the sheet would save (falls back to "aching" only for the live red-flag preview).

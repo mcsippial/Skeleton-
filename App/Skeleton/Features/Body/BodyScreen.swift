@@ -8,6 +8,7 @@ struct BodyScreen: View {
     @State private var model: BodyViewModel
     @State private var showGallery = false
     @State private var panelContentHeight: CGFloat = 0
+    @State private var panelExpanded = false
 
     @State private var showProfile = false
     @State private var reportURL: URL?
@@ -74,6 +75,14 @@ struct BodyScreen: View {
     private var header: some View {
         HStack {
             Text("Skeleton").font(.system(size: 22, weight: .bold)).tracking(-0.4)
+            if app.isDemoMode {
+                Text("DEMO")
+                    .font(.system(size: 10, weight: .bold)).tracking(1)
+                    .foregroundStyle(Theme.Color.secondaryText)
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(Capsule().fill(Theme.Color.track))
+                    .accessibilityLabel("Demo mode, not synced")
+            }
             Spacer()
             Button { model.isDescribeSheetPresented = true } label: {
                 Label("Describe", systemImage: "text.bubble")
@@ -85,7 +94,9 @@ struct BodyScreen: View {
             }
             .buttonStyle(.plain)
             Menu {
-                Button("Doctor report", systemImage: "doc.text") { makeReport() }
+                Section(app.isDemoMode ? "Demo mode: data stays on this device" : "Signed in · synced with Supabase") {
+                    Button("Doctor report", systemImage: "doc.text") { makeReport() }
+                }
                 Button("Edit profile", systemImage: "person.crop.circle") { showProfile = true }
                 Button("Design system", systemImage: "square.grid.2x2") { showGallery = true }
                 Button("Reset view", systemImage: "arrow.counterclockwise") { model.resetCamera() }
@@ -194,51 +205,117 @@ struct BodyScreen: View {
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 
+    /// What the drawer is showing, so it can open itself when something is selected.
+    private var panelFocus: String {
+        if let s = model.selection { return "s:\(s.structureID)" }
+        if let r = model.selectedSpot { return "r:\(r)" }
+        if let e = model.selectedEpisode { return "e:\(e.id)" }
+        return ""
+    }
+
+    /// One-line summary shown when the drawer is collapsed.
+    private var panelSummary: String {
+        if let s = model.selection { return s.region.map { "\(s.structureName) · \($0.name)" } ?? s.structureName }
+        if let r = model.selectedSpot { return "\(model.regionName(r)) · history" }
+        if let e = model.selectedEpisode { return "Insight · \(e.title)" }
+        let count = model.episodes.count
+        if count > 0 { return "\(count) linked \(count == 1 ? "episode" : "episodes") · tap to see insights" }
+        return model.spots.isEmpty ? "Tap the body to log pain" : "Tap a glowing spot for its history"
+    }
+
+    /// Collapsible drawer: a single line by default so the body stays the hero; red flags always visible.
     private var panel: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.m) {
-            PillSegmentedControl(options: ViewPreset.allCases.map { (value: $0, title: $0.title) },
-                                 selection: Binding(get: { model.preset }, set: { model.select($0) }))
-            ScrollView {
-                VStack(alignment: .leading, spacing: Theme.Spacing.m) {
-                    // Red flags are always shown first and are never softened.
-                    ForEach(model.activeRedFlags) { flag in
-                        RedFlagCard(headline: flag.headline, title: flag.title, message: flag.message,
-                                    isEmergency: flag.urgency == .emergency)
+        VStack(alignment: .leading, spacing: Theme.Spacing.s) {
+            Button {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { panelExpanded.toggle() }
+            } label: {
+                VStack(spacing: 8) {
+                    Capsule().fill(Theme.Color.secondaryText.opacity(0.35)).frame(width: 36, height: 5)
+                    HStack {
+                        Text(panelSummary)
+                            .font(.system(size: 14, weight: .semibold))
+                            .lineLimit(1)
+                        Spacer()
+                        Image(systemName: panelExpanded ? "chevron.down" : "chevron.up")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Theme.Color.secondaryText)
                     }
-                    if let error = model.loadError {
-                        Text(error).font(Theme.Font.caption).foregroundStyle(Theme.Color.redFlag)
-                    }
-                    if let s = model.selection {
-                        selectionCard(s)
-                    } else if let spot = model.selectedSpot {
-                        historyCard(spot)
-                    } else if let episode = model.selectedEpisode {
-                        InsightCard(model: model, episode: episode)
-                    } else {
-                        EpisodesCard(model: model)
-                        GlassCard(label: "Your body") {
-                            Text(model.spots.isEmpty
-                                 ? "Tap any spot to identify it, then log pain there."
-                                 : "Glowing spots are pain from the last two weeks. Tap one for its history, or tap anywhere to log new pain.")
-                                .font(Theme.Font.callout)
-                                .foregroundStyle(Color(hex: 0x2A2A2E))
-                        }
-                    }
-                    Text("Stock body fitted to your height and build. The inner layers are reference anatomy, not your own internal structures. Not medical advice.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Theme.Color.secondaryText)
                 }
-                .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { panelContentHeight = $0 }
+                .contentShape(Rectangle())
             }
-            .scrollBounceBehavior(.basedOnSize)
-            .frame(height: min(panelContentHeight, 320))
+            .buttonStyle(.plain)
+            .accessibilityLabel(panelExpanded ? "Collapse details" : "Show details: \(panelSummary)")
+            .gesture(DragGesture(minimumDistance: 12).onEnded { g in
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
+                    if g.translation.height < -20 { panelExpanded = true }
+                    if g.translation.height > 20 { panelExpanded = false }
+                }
+            })
+
+            // Red flags are always shown first and are never softened, even with the drawer closed.
+            if !panelExpanded {
+                ForEach(model.activeRedFlags) { flag in
+                    Button {
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { panelExpanded = true }
+                    } label: {
+                        Label("\(flag.headline): \(flag.title)", systemImage: "exclamationmark.triangle.fill")
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundStyle(Theme.Color.redFlag)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Color(hex: 0xFFE9E6)))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            if panelExpanded {
+                PillSegmentedControl(options: ViewPreset.allCases.map { (value: $0, title: $0.title) },
+                                     selection: Binding(get: { model.preset }, set: { model.select($0) }))
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.m) {
+                        ForEach(model.activeRedFlags) { flag in
+                            RedFlagCard(headline: flag.headline, title: flag.title, message: flag.message,
+                                        isEmergency: flag.urgency == .emergency)
+                        }
+                        if let error = model.loadError {
+                            Text(error).font(Theme.Font.caption).foregroundStyle(Theme.Color.redFlag)
+                        }
+                        if let s = model.selection {
+                            selectionCard(s)
+                        } else if let spot = model.selectedSpot {
+                            historyCard(spot)
+                        } else if let episode = model.selectedEpisode {
+                            InsightCard(model: model, episode: episode)
+                        } else {
+                            EpisodesCard(model: model)
+                            GlassCard(label: "Your body") {
+                                Text(model.spots.isEmpty
+                                     ? "Tap any spot to identify it, then log pain there. Or tap Describe and say where it hurts."
+                                     : "Glowing spots are pain from the last two weeks. Tap one for its history, or tap anywhere to log new pain.")
+                                    .font(Theme.Font.callout)
+                                    .foregroundStyle(Color(hex: 0x2A2A2E))
+                            }
+                        }
+                        Text("Stock body fitted to your height and build. The inner layers are reference anatomy, not your own internal structures. Not medical advice.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Theme.Color.secondaryText)
+                    }
+                    .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { panelContentHeight = $0 }
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .frame(height: min(panelContentHeight, 250))
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
+            }
         }
         .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
         .glass(UnevenRoundedRectangle(topLeadingRadius: Theme.Radius.large, topTrailingRadius: Theme.Radius.large, style: .continuous),
                rainbow: true, tint: 0.72)
-        .animation(.spring(response: 0.4, dampingFraction: 0.85), value: model.selection?.structureID)
+        .onChange(of: panelFocus) { _, focus in
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { panelExpanded = !focus.isEmpty }
+        }
     }
 
     private func selectionCard(_ s: BodyTapResult) -> some View {

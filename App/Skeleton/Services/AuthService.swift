@@ -12,11 +12,13 @@ struct AppUser: Sendable, Equatable {
 enum AuthError: LocalizedError {
     case invalidCredentials
     case notConfigured
+    case confirmEmail(String)
 
     var errorDescription: String? {
         switch self {
         case .invalidCredentials: "Enter a valid email and a password of at least 6 characters."
         case .notConfigured: "Supabase is not configured. Running in demo mode."
+        case .confirmEmail(let email): "Check \(email) for a confirmation link, then come back and sign in."
         }
     }
 }
@@ -75,6 +77,8 @@ struct SupabaseAuthService: AuthService {
 
     func signUp(email: String, password: String) async throws -> AppUser {
         let response = try await client.auth.signUp(email: email, password: password)
+        // With email confirmation on, sign-up returns no session until the link is clicked.
+        guard response.session != nil else { throw AuthError.confirmEmail(email) }
         return AppUser(id: response.user.id, email: response.user.email)
     }
 

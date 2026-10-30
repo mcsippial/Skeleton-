@@ -9,6 +9,8 @@ struct AppConfig: Sendable {
     let supabaseURL: URL?
     let supabaseAnonKey: String
     let serviceMode: ServiceMode
+    /// Why the app is in demo mode, when live was asked for but can't run.
+    let fallbackReason: String?
 
     static func load(bundle: Bundle = .main, environment: [String: String] = ProcessInfo.processInfo.environment) -> AppConfig {
         func value(_ key: String) -> String {
@@ -21,7 +23,12 @@ struct AppConfig: Sendable {
         // SKELETON_SERVICES (scheme env var) overrides the build setting.
         let requested = environment["SKELETON_SERVICES"] ?? value("SKServiceMode")
         // Live services need a configured backend; otherwise the app runs end-to-end on mocks.
-        let mode: ServiceMode = (requested == "live" && url != nil && !key.isEmpty) ? .live : .mock
-        return AppConfig(supabaseURL: url, supabaseAnonKey: key, serviceMode: mode)
+        let wantsLive = requested != "mock"
+        let canGoLive = url != nil && !key.isEmpty
+        let config = AppConfig(supabaseURL: url, supabaseAnonKey: key,
+                               serviceMode: wantsLive && canGoLive ? .live : .mock,
+                               fallbackReason: wantsLive && !canGoLive ? "Supabase URL or anon key missing from the build settings" : nil)
+        print("Skeleton services: \(config.serviceMode.rawValue)\(config.fallbackReason.map { " (\($0))" } ?? "")")
+        return config
     }
 }

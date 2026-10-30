@@ -10,8 +10,9 @@
 // xcconfig treats "//" as a comment, hence "$()" between the slashes.
 SUPABASE_URL = https:/$()/otintmfebdkxkrqgryut.supabase.co
 SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90aW50bWZlYmRreGtycWdyeXV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMzOTgzMzYsImV4cCI6MjEwODk3NDMzNn0.dW54sgD5LgHekDIe5a9AxTJR1VRUXjcnBUbmyPCi0gg
-// mock | live. The SKELETON_SERVICES scheme environment variable overrides this at run time.
-SKELETON_SERVICES = mock
+// live = the Supabase project above (real sign-in, sync, Claude). mock = demo data on the device, no backend.
+// To try demo data, set SKELETON_SERVICES = mock in Skeleton.local.xcconfig (or as a scheme environment variable).
+SKELETON_SERVICES = live
 
 // Signing. Set DEVELOPMENT_TEAM (and a bundle ID you own) in Skeleton.local.xcconfig.
 PRODUCT_BUNDLE_IDENTIFIER = app.skeleton.ios
