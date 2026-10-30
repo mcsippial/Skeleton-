@@ -19,8 +19,8 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [x] Unit tests: atlas mapping (incl. rescan re-projection), pathway matching, red-flag rules, mesh winding, ray hit-testing
 
 ### Still to do in Phase 1
-- [ ] Onboarding: demographics → stock body fitted to the profile (currently uses reference proportions)
-- [x] Pain entries persisted (`PainRepository`: Supabase + in-memory mock); profiles still to do
+- [x] Onboarding: disclaimer → about you → build → optional history → body fitted to the profile; edit later from the menu
+- [x] Pain entries and profiles persisted (Supabase + in-memory mocks); demographics feed the insight validator
 - [x] Tap logging sheet (type, intensity, onset, pattern, triggers/relievers, notes, red-flag symptom checks), multi-spot select, live red-flag cards
 - [x] Text logging with the mock parser (`MockTextPainParser`) → highlight regions → confirm/edit before saving
 - [x] Heat spots (colour = intensity, pulse = recent), tap a spot → history
@@ -28,7 +28,8 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [x] Cause engine: rules layer + `InsightProvider` interface with mock responses + `InsightValidator` (pathway, diagnosis, dosing, demographics, red-flag softening) + tests
 - [x] Connected structures glow along active pathways (`linked_structures`)
 - [x] Seed demo user: lower back → groin and jaw → neck histories (mock repository)
-- [ ] App icon, TestFlight build
+- [x] App icon (`tools/gen_icon.py`)
+- [ ] TestFlight build (steps in `docs/TESTFLIGHT.md`)
 - [ ] Verify on device: RealityView background is transparent over the glow; tune lighting / skin material; consider a ShaderGraph thin-film material for true iridescence
 - [ ] Swap prototype anatomy for Z-Anatomy USDZ layers (prototype only, CC BY-SA) or keep the procedural body until Phase 4
 

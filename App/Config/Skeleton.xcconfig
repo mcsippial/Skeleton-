@@ -11,4 +11,9 @@ SUPABASE_ANON_KEY =
 // mock | live. The SKELETON_SERVICES scheme environment variable overrides this at run time.
 SKELETON_SERVICES = mock
 
+// Signing. Set DEVELOPMENT_TEAM (and a bundle ID you own) in Skeleton.local.xcconfig.
+PRODUCT_BUNDLE_IDENTIFIER = app.skeleton.ios
+CODE_SIGN_STYLE = Automatic
+DEVELOPMENT_TEAM =
+
 #include? "Skeleton.local.xcconfig"

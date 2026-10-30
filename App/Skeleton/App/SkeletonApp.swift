@@ -23,15 +23,32 @@ struct RootView: View {
             if model.isRestoring {
                 ProgressView()
             } else if let user = model.user {
-                BodyScreen(app: model, userID: user.id)
-                    .id(user.id)
-                    .transition(.opacity)
+                switch model.profileState {
+                case .unknown:
+                    ProgressView()
+                case .missing:
+                    OnboardingView(userID: user.id, existing: nil)
+                        .transition(.opacity)
+                case .failed(let message):
+                    VStack(spacing: Theme.Spacing.m) {
+                        Text("Couldn't load your profile.").font(Theme.Font.headline)
+                        Text(message).font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
+                        Button("Try again") { Task { await model.loadProfile() } }.buttonStyle(.primaryPill)
+                    }
+                    .padding(Theme.Spacing.l)
+                case .loaded(let profile):
+                    // Re-created when proportions change, so the body is rebuilt to fit.
+                    BodyScreen(app: model, profile: profile)
+                        .id(profile)
+                        .transition(.opacity)
+                }
             } else {
                 SignInView()
                     .transition(.opacity)
             }
         }
         .animation(.spring(response: 0.5, dampingFraction: 0.9), value: model.user)
+        .animation(.spring(response: 0.5, dampingFraction: 0.9), value: model.profileState)
         .task { await model.restore() }
     }
 }

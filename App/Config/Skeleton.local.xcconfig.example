@@ -3,3 +3,8 @@
 SUPABASE_URL = http:/$()/127.0.0.1:54321
 SUPABASE_ANON_KEY = your-local-or-project-anon-key
 SKELETON_SERVICES = live
+
+// Signing for devices / TestFlight. Your Team ID is in developer.apple.com → Account → Membership.
+DEVELOPMENT_TEAM = ABCDE12345
+// Must be unique in App Store Connect; change if app.skeleton.ios is taken.
+PRODUCT_BUNDLE_IDENTIFIER = app.skeleton.ios

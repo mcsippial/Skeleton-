@@ -9,9 +9,13 @@ struct BodyScreen: View {
     @State private var showGallery = false
     @State private var panelContentHeight: CGFloat = 0
 
-    init(app: AppModel, userID: UUID) {
+    @State private var showProfile = false
+    private let profile: Profile
+
+    init(app: AppModel, profile: Profile) {
+        self.profile = profile
         _model = State(initialValue: BodyViewModel(data: app.data, pain: app.pain, insights: app.insights,
-                                                   parser: app.parser, userID: userID))
+                                                   parser: app.parser, profile: profile))
     }
 
     var body: some View {
@@ -25,11 +29,15 @@ struct BodyScreen: View {
             panel
         }
         .task {
-            async let bodyLoad: Void = model.load()
+            async let bodyLoad: Void = model.load(morph: profile.morph)
             async let historyLoad: Void = model.loadEntries()
             _ = await (bodyLoad, historyLoad)
         }
         .sheet(isPresented: $showGallery) { DesignGalleryView(data: app.data) }
+        .sheet(isPresented: $showProfile) {
+            OnboardingView(userID: profile.userID, existing: profile) { showProfile = false }
+                .presentationBackground { GlowBackground() }
+        }
         .sheet(isPresented: Bindable(model).isDescribeSheetPresented) {
             DescribePainSheet(model: model)
                 .presentationDetents([.medium])
@@ -64,6 +72,7 @@ struct BodyScreen: View {
             }
             .buttonStyle(.plain)
             Menu {
+                Button("Edit profile", systemImage: "person.crop.circle") { showProfile = true }
                 Button("Design system", systemImage: "square.grid.2x2") { showGallery = true }
                 Button("Reset view", systemImage: "arrow.counterclockwise") { model.resetCamera() }
                 Button("Sign out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {

@@ -9,6 +9,7 @@ final class BodyViewModel {
     let insights: any InsightProvider
     let parser: any TextPainParser
     let userID: UUID
+    let demographics: Demographics
 
     /// All of the user's pain entries, oldest first.
     private(set) var entries: [PainEntry] = []
@@ -44,12 +45,13 @@ final class BodyViewModel {
     private var flashTask: Task<Void, Never>?
 
     init(data: SkeletonData, pain: any PainRepository, insights: any InsightProvider,
-         parser: any TextPainParser, userID: UUID) {
+         parser: any TextPainParser, profile: Profile) {
         self.data = data
         self.pain = pain
         self.insights = insights
         self.parser = parser
-        self.userID = userID
+        self.userID = profile.userID
+        self.demographics = profile.demographics
     }
 
     private var matcher: PathwayMatcher { PathwayMatcher(library: data.pathways, atlas: data.atlas) }
@@ -153,10 +155,11 @@ final class BodyViewModel {
         isLoadingInsight = true
         let engine = InsightEngine(data: data, provider: insights)
         let all = entries
+        let demographics = self.demographics
         Task {
             defer { isLoadingInsight = false }
             do {
-                let result = try await engine.insight(for: episode, entries: all)
+                let result = try await engine.insight(for: episode, entries: all, demographics: demographics)
                 if selectedEpisode?.id == episode.id { insight = result }
             } catch {
                 insightError = "Couldn't build the insight. \(error.localizedDescription)"
