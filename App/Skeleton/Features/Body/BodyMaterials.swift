@@ -43,22 +43,6 @@ enum BodyMaterials {
         return m
     }
 
-    /// Brief teal glow for a tapped structure.
-    static func tapped(for layer: AnatomyLayer) -> PhysicallyBasedMaterial {
-        var m = base(for: layer)
-        m.emissiveColor = .init(color: UIColor(hex: 0x1D8C74))
-        m.emissiveIntensity = 1.2
-        return m
-    }
-
-    /// Warm glow for structures along an active pain pathway (e.g. psoas + groin nerves for back → groin).
-    static func glowing(for layer: AnatomyLayer) -> PhysicallyBasedMaterial {
-        var m = base(for: layer)
-        m.emissiveColor = .init(color: UIColor(hex: 0xFF6A3D))
-        m.emissiveIntensity = 0.9
-        return m
-    }
-
     /// White seams between skin regions; fade with the skin as x-ray increases.
     static func seams(skinOpacity: Float) -> UnlitMaterial {
         var m = UnlitMaterial(color: .rgbWhite)
