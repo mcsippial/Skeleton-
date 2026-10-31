@@ -21,13 +21,13 @@ enum BodyMaterials {
                 m.blending = .transparent(opacity: .init(floatLiteral: max(skinOpacity, 0)))
             }
         case .muscles:
-            m.baseColor = .init(tint: UIColor(hex: 0xC9564C))
-            m.roughness = .init(floatLiteral: 0.45)
-            m.clearcoat = .init(floatLiteral: 0.3)
+            m.baseColor = .init(tint: UIColor(hex: 0xC24F45))
+            m.roughness = .init(floatLiteral: 0.55)
+            m.clearcoat = .init(floatLiteral: 0.12)
             m.clearcoatRoughness = .init(floatLiteral: 0.4)
         case .tendons:
-            m.baseColor = .init(tint: UIColor(hex: 0xF2EFE6))
-            m.roughness = .init(floatLiteral: 0.35)
+            m.baseColor = .init(tint: UIColor(hex: 0xDDD5C4))
+            m.roughness = .init(floatLiteral: 0.45)
             m.metallic = .init(floatLiteral: 0.1)
         case .nerves:
             m.baseColor = .init(tint: UIColor(hex: 0xF2B630))
@@ -36,9 +36,9 @@ enum BodyMaterials {
             m.emissiveColor = .init(color: UIColor(hex: 0x3A2800))
             m.emissiveIntensity = 1
         case .bones:
-            m.baseColor = .init(tint: UIColor(hex: 0xF2ECE0))
-            m.roughness = .init(floatLiteral: 0.55)
-            m.clearcoat = .init(floatLiteral: 0.3)
+            m.baseColor = .init(tint: UIColor(hex: 0xE6DCC8))
+            m.roughness = .init(floatLiteral: 0.6)
+            m.clearcoat = .init(floatLiteral: 0.1)
         }
         return m
     }

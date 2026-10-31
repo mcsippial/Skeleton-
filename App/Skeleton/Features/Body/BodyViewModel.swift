@@ -199,10 +199,23 @@ final class BodyViewModel {
             .filter { displayDate.timeIntervalSince($0.appearsAt) <= window }
     }
 
-    /// Structures along pathways that became active in the last 3 days glow.
+    /// Links between pains only show once you open one: a pattern (its links) or a pain area
+    /// (links touching it). Otherwise the body shows just the pain colours.
+    private var shownArcs: [FlowArc] {
+        if let episode = selectedEpisode {
+            let ids = Set(episode.entryIDs)
+            return visibleArcs.filter { ids.contains($0.fromEntryID) || ids.contains($0.toEntryID) }
+        }
+        if let spot = selectedSpot {
+            return visibleArcs.filter { $0.fromRegionID == spot || $0.toRegionID == spot }
+        }
+        return []
+    }
+
+    /// Structures along the shown links glow.
     private var glowingStructures: Set<String> {
         var ids = Set<String>()
-        for arc in visibleArcs where displayDate.timeIntervalSince(arc.appearsAt) <= 3 * 86_400 {
+        for arc in shownArcs {
             if let p = data.pathways.pathway(arc.pathwayID) { ids.formUnion(p.structures(for: arc.side)) }
         }
         return ids
@@ -210,7 +223,7 @@ final class BodyViewModel {
 
     private var arcRenders: [BodySceneController.ArcRender] {
         guard let body = stockBody else { return [] }
-        return visibleArcs.compactMap { arc in
+        return shownArcs.compactMap { arc in
             guard let a = body.anchor(ofRegion: arc.fromRegionID), let b = body.anchor(ofRegion: arc.toRegionID) else { return nil }
             return .init(id: arc.id, points: FlowArc.curve(from: a, to: b))
         }

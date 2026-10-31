@@ -183,7 +183,6 @@ final class BodySceneController {
         }
     }
 
-    private static let spotCore = try? MeshResource.generate(from: [spotDescriptor(radius: 0.016, name: "spot-core")])
 
     private static func spotDescriptor(radius: Float, name: String) -> MeshDescriptor {
         let m = MeshBuilder.sphere(radius: radius, segments: 20, rings: 14)
@@ -196,8 +195,8 @@ final class BodySceneController {
 
     private var patchMeshes: [String: (area: MeshResource?, glow: MeshResource?)] = [:]
 
-    /// A pain area: a soft glow across the skin (colour = intensity) with a small marker at its centre
-    /// that pulses when the pain is recent. Pending areas (being picked) glow white.
+    /// A pain area: the region filled with colour (= intensity) and a faint glow around it.
+    /// Pending areas (being picked) are white.
     private func makeSpot(_ spot: SpotRender) -> Entity {
         let group = Entity()
         group.name = "spot.\(spot.id)"
@@ -220,25 +219,6 @@ final class BodySceneController {
             group.addChild(ModelEntity(mesh: area, materials: [m]))
         }
 
-        guard let coreMesh = Self.spotCore else { return group }
-        var coreMaterial = UnlitMaterial(color: color)
-        coreMaterial.blending = .transparent(opacity: .init(floatLiteral: 0.95))
-        let core = ModelEntity(mesh: coreMesh, materials: [coreMaterial])
-        core.position = spot.position
-        let scale: Float = spot.isPending ? 0.7 : 0.5 + Float(spot.intensity) / 30
-        core.scale = SIMD3(repeating: scale)
-        group.addChild(core)
-
-        if spot.pulses {
-            // Gentle pulse for recent pain.
-            let pulse = FromToByAnimation<Transform>(
-                from: Transform(scale: SIMD3(repeating: scale * 0.8), translation: spot.position),
-                to: Transform(scale: SIMD3(repeating: scale * 1.3), translation: spot.position),
-                duration: 0.9, timing: .easeInOut, bindTarget: .transform, repeatMode: .autoReverse)
-            if let resource = try? AnimationResource.generate(with: pulse) {
-                core.playAnimation(resource)
-            }
-        }
         return group
     }
 
@@ -310,9 +290,10 @@ final class BodySceneController {
     private func addLights(height: Float) {
         let target = SIMD3<Float>(0, 0.95 * height, 0)
         let lights: [(SIMD3<Float>, UIColor, Float)] = [
-            (SIMD3(2, 3, 2), .rgbWhite, 4000),                                // key
-            (SIMD3(-2, 1.5, 2), .rgbWhite, 1800),                             // fill
-            (SIMD3(-1, 2, -3), UIColor(red: 0.73, green: 0.84, blue: 1, alpha: 1), 2000), // cool rim
+            // Softer and more directional than before, so shapes read when the skin is off.
+            (SIMD3(2, 3, 2), .rgbWhite, 2600),                                // key
+            (SIMD3(-2, 1.5, 2), .rgbWhite, 650),                              // fill
+            (SIMD3(-1, 2, -3), UIColor(red: 0.73, green: 0.84, blue: 1, alpha: 1), 1100), // cool rim
         ]
         for (position, color, intensity) in lights {
             let light = DirectionalLight()
@@ -351,7 +332,7 @@ final class BodySceneController {
               let env = try? await EnvironmentResource(equirectangular: image) else { return nil }
         let entity = Entity()
         entity.name = "ibl"
-        entity.components.set(ImageBasedLightComponent(source: .single(env), intensityExponent: 0.8))
+        entity.components.set(ImageBasedLightComponent(source: .single(env), intensityExponent: -0.4))
         return entity
     }
 
