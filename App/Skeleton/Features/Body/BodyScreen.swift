@@ -8,7 +8,10 @@ struct BodyScreen: View {
     @State private var model: BodyViewModel
     @State private var showGallery = false
     @State private var panelContentHeight: CGFloat = 0
+    /// Sheet positions: closed (summary line), half (expanded), full (panelFull).
     @State private var panelExpanded = false
+    @State private var panelFull = false
+    @State private var screenHeight: CGFloat = 800
     @AppStorage("bodyHintSeen") private var hintSeen = false
 
     @State private var showProfile = false
@@ -58,6 +61,7 @@ struct BodyScreen: View {
         .animation(.easeInOut(duration: 0.2), value: model.tooltip?.title)
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: model.isPickingSpots)
         .onChange(of: model.tooltip?.title) { _, title in if title != nil { hintSeen = true } }
+        .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { screenHeight = $0 }
         .task {
             async let bodyLoad: Void = model.load(morph: profile.morph)
             async let historyLoad: Void = model.loadEntries()
@@ -264,16 +268,31 @@ struct BodyScreen: View {
                             }
                         }
                         panelExpanded.toggle()
+                        panelFull = false
                     } else if dy < -30 {
+                        // Up: closed → half → full; a strong flick goes straight to full.
+                        if panelExpanded || dy < -400 { panelFull = true }
                         panelExpanded = true
                     } else if dy > 30 {
-                        panelExpanded = false
+                        // Down: full → half → closed; a strong flick closes it.
+                        if panelFull && dy < 400 {
+                            panelFull = false
+                        } else {
+                            panelFull = false
+                            panelExpanded = false
+                        }
                     }
                 }
             })
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.isButton)
             .accessibilityHint(panelExpanded ? "Collapses the details" : "Shows the details")
+            .accessibilityAction(named: panelFull ? "Half height" : "Full height") {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
+                    panelExpanded = true
+                    panelFull.toggle()
+                }
+            }
 
             // Red flags are always shown first and are never softened, even with the sheet closed.
             if !panelExpanded {
@@ -321,7 +340,7 @@ struct BodyScreen: View {
                     .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { panelContentHeight = $0 }
                 }
                 .scrollBounceBehavior(.basedOnSize)
-                .frame(height: min(panelContentHeight, 300))
+                .frame(height: panelFull ? screenHeight * 0.7 : min(panelContentHeight, 300))
                 .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
         }
@@ -340,7 +359,10 @@ struct BodyScreen: View {
                 .ignoresSafeArea(edges: .bottom)
         }
         .onChange(of: panelFocus) { _, focus in
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) { panelExpanded = !focus.isEmpty }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
+                panelExpanded = !focus.isEmpty
+                if focus.isEmpty { panelFull = false }
+            }
         }
     }
 
