@@ -33,7 +33,8 @@ final class BodyViewModel {
     private(set) var bodyMaps: [BodyProjection.View: BodyMapImage] = [:]
     var visibleLayers = Set(AnatomyLayer.allCases)
     /// 0 = skin invisible (full x-ray), 1 = solid skin.
-    var skinOpacity: Double = 0.5
+    /// Skin is either on (solid, hides the layers under it) or off (shows what's inside).
+    var skinOpacity: Double { visibleLayers.contains(.skin) ? 1 : 0 }
     private(set) var selection: BodyTapResult?
     private(set) var tooltip: (title: String, subtitle: String)?
     private(set) var flashID: String?
@@ -585,7 +586,13 @@ final class BodyViewModel {
     }
 
     func toggle(_ layer: AnatomyLayer) {
-        if visibleLayers.contains(layer) { visibleLayers.remove(layer) } else { visibleLayers.insert(layer) }
+        if visibleLayers.contains(layer) {
+            visibleLayers.remove(layer)
+        } else {
+            visibleLayers.insert(layer)
+            // Turning on an inner layer while the skin covers it: take the skin off so it shows.
+            if layer != .skin { visibleLayers.remove(.skin) }
+        }
     }
 
     // MARK: Camera gestures

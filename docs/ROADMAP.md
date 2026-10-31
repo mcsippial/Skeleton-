@@ -13,7 +13,7 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [x] `/data/body-atlas.json` v1 — 120 regions anchored to a Mixamo-compatible reference rig
 - [x] `/data/pain-pathways.json` v1 — the 13 seed pathways, with sources
 - [x] `/data/red-flags.json` v1 — the 9 seed red flags (+ kidney/urinary), strict-decoded rules
-- [x] Stock layered body (port of the concept preview) rendering in a `RealityView`: rotate, zoom, x-ray slider, layer toggles, tap → structure + atlas region, camera glide to a region
+- [x] Stock layered body (port of the concept preview) rendering in a `RealityView`: rotate, zoom, skin on/off (was the x-ray slider), layer toggles, tap → structure + atlas region, camera glide to a region
 - [x] Body scaled by height / weight / sex (invertible morph, so taps still map to the reference atlas)
 - [x] Supabase email auth behind `AuthService`, with a mock (default when no keys are set)
 - [x] Unit tests: atlas mapping (incl. rescan re-projection), pathway matching, red-flag rules, mesh winding, ray hit-testing

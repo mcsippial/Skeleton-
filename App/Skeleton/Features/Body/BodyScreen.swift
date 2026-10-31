@@ -1,7 +1,7 @@
 import SkeletonCore
 import SwiftUI
 
-/// Body tab: the 3D body with layer toggles, x-ray, tap-to-identify, logging and pain patterns.
+/// Body tab: the 3D body with layer toggles (Skin on/off shows what's inside), tap-to-identify, logging and pain patterns.
 /// Mirrors the interactions in `docs/preview/index.html`.
 struct BodyScreen: View {
     @Environment(AppModel.self) private var app
@@ -36,7 +36,6 @@ struct BodyScreen: View {
                             }
                             .transition(.scale.combined(with: .opacity))
                         }
-                        XRaySlider(value: Bindable(model).skinOpacity)
                     }
                     .animation(.spring(response: 0.35, dampingFraction: 0.8), value: model.isZoomedIn)
                 }

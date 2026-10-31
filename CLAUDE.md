@@ -79,7 +79,7 @@ Account → demographics (age, sex, height, weight, activity level, relevant his
 - The user's 3D body with active pain shown as glowing heat spots (color = intensity, pulse = recent).
 - Tap a spot → its history.
 - **Layer toggles:** Skin, Muscles, Tendons & ligaments, Nerves, Bones (organs later).
-- **X-ray slider:** fades the skin from solid to iridescent glass to invisible.
+- **Skin toggle (replaces the x-ray slider, changed Oct 2026 at the owner's request):** the Skin button switches between the segmented skin and the inside; turning on an inner layer takes the skin off.
 - **Tap any structure** → name, plain-English description, and any pain linked to it.
 - **Connected structures glow** when a pain pathway is active (e.g. psoas + groin nerves for back → groin).
 - Reference: the working concept preview (`/docs/preview/index.html`) shows the intended interactions.
