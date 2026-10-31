@@ -98,3 +98,29 @@ final class PainPatchTests: XCTestCase {
         XCTAssert(large.indices.allSatisfy { Int($0) < large.positions.count })
     }
 }
+
+final class RegionMapTests: XCTestCase {
+    func testPrecomputedTableMatchesTapMapping() throws {
+        let F = Fixtures.self
+        let table = try XCTUnwrap(F.data.skinRegions)
+        let withTable = StockBody(atlas: F.data.atlas, skin: F.data.skin, skinRegions: table)
+        let computed = StockBody(atlas: F.data.atlas, skin: F.data.skin)
+        XCTAssertEqual(withTable.skinTriangleRegions.count, computed.skinTriangleRegions.count)
+        // Same rule; allow a tiny float difference at region borders.
+        let same = zip(withTable.skinTriangleRegions, computed.skinTriangleRegions).filter { $0 == $1 }.count
+        XCTAssertGreaterThan(Double(same) / Double(computed.skinTriangleRegions.count), 0.995)
+    }
+
+    func testRegionPatchAndMap() throws {
+        let F = Fixtures.self
+        let body = StockBody(atlas: F.data.atlas, skin: F.data.skin, skinRegions: F.data.skinRegions)
+        let patch = try XCTUnwrap(body.regionPatch("lumbar_l"))
+        let anchor = try XCTUnwrap(body.anchor(ofRegion: "lumbar_l"))
+        XCTAssert(patch.positions.allSatisfy { $0.distance(to: anchor) < 0.25 })
+        let back = body.regionMap(view: .back)
+        XCTAssertNotNil(back.triangles["lumbar_l"])
+        XCTAssertNil(back.triangles["chest_l"], "front-only regions don't show from the back")
+        XCTAssertFalse(back.seams.isEmpty)
+        XCTAssertEqual(back.maxY, 1.735, accuracy: 0.03)
+    }
+}

@@ -25,9 +25,13 @@ public struct StockBody: Sendable {
     /// Skin triangles (morphed), with their centroids, for pain-area glow patches.
     private let skinMesh: MeshData
     private let skinCentroids: [Vec3]
+    /// Atlas region of each skin triangle (precomputed table when it matches, else computed here).
+    let skinTriangleRegions: [String?]
+    var skinMeshForMap: MeshData { skinMesh }
     private let atlasRegions: [String: BodyRegion]
 
-    public init(atlas: BodyAtlas, morph: BodyMorph = .identity, skin: MeshData? = nil, inner: [AnatomyStructure]? = nil) {
+    public init(atlas: BodyAtlas, morph: BodyMorph = .identity, skin: MeshData? = nil, inner: [AnatomyStructure]? = nil,
+                skinRegions: SkinRegionTable? = nil) {
         self.morph = morph
         let morphed = StockAnatomy.build(skin: skin, inner: inner).map {
             AnatomyStructure(id: $0.id, name: $0.name, layer: $0.layer, info: $0.info, mesh: morph.apply(to: $0.mesh))
@@ -62,6 +66,32 @@ public struct StockBody: Sendable {
             (merged.positions[Int(merged.indices[i])] + merged.positions[Int(merged.indices[i + 1])] + merged.positions[Int(merged.indices[i + 2])]) / 3
         }
         atlasRegions = Dictionary(uniqueKeysWithValues: atlas.regions.map { ($0.id, $0) })
+        let triCount = merged.indices.count / 3
+        if let table = skinRegions, table.triangleCount == triCount, table.atlasVersion == atlas.version {
+            skinTriangleRegions = table.perTriangle()
+        } else {
+            // No matching table (e.g. a new scan): map each triangle like a tap would.
+            skinTriangleRegions = skinCentroids.map { mapper.region(at: morph.invert($0))?.regionID }
+        }
+    }
+
+    /// Exactly the skin of one region, lifted slightly off the surface, for filling a pain area.
+    public func regionPatch(_ id: String, lift: Float = 0.002) -> MeshData? {
+        var out = MeshData()
+        var remap: [UInt32: UInt32] = [:]
+        for (t, r) in skinTriangleRegions.enumerated() where r == id {
+            for k in 0..<3 {
+                let old = skinMesh.indices[t * 3 + k]
+                if let n = remap[old] { out.indices.append(n); continue }
+                let n = UInt32(out.positions.count)
+                remap[old] = n
+                let normal = skinMesh.normals[Int(old)]
+                out.positions.append(skinMesh.positions[Int(old)] + normal * lift)
+                out.normals.append(normal)
+                out.indices.append(n)
+            }
+        }
+        return out.indices.isEmpty ? nil : out
     }
 
     /// The patch of skin around a region, lifted slightly off the surface, for a soft glow.
@@ -129,6 +159,8 @@ public struct SkeletonData: Sendable {
     public var skin: MeshData?
     /// Region guides for single-pain insights (`region-guides.json`).
     public var guides: RegionGuideLibrary?
+    /// Atlas region of each stock-skin triangle (`stock-body-skin-regions.json`).
+    public var skinRegions: SkinRegionTable?
 
     public init(atlas: Data, pathways: Data, redFlags: Data) throws {
         self.atlas = try BodyAtlas.load(from: atlas)
@@ -143,5 +175,6 @@ public struct SkeletonData: Sendable {
                       redFlags: Data(contentsOf: directory.appendingPathComponent("red-flags.json")))
         skin = (try? Data(contentsOf: directory.appendingPathComponent("stock-body-skin.bin"))).flatMap { try? MeshData.fromSkinBinary($0) }
         guides = try RegionGuideLibrary.load(from: Data(contentsOf: directory.appendingPathComponent("region-guides.json")))
+        skinRegions = (try? Data(contentsOf: directory.appendingPathComponent("stock-body-skin-regions.json"))).flatMap { try? SkinRegionTable.load(from: $0) }
     }
 }

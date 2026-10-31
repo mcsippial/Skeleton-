@@ -182,9 +182,7 @@ final class BodySceneController {
         return d
     }
 
-    /// Glow bands (patch scale × region radius, opacity): stacked, so the centre reads strongest.
-    private static let glowBands: [(scale: Float, opacity: Float)] = [(1.7, 0.13), (1.2, 0.17), (0.75, 0.24)]
-    private var patchMeshes: [String: [MeshResource]] = [:]
+    private var patchMeshes: [String: (area: MeshResource?, glow: MeshResource?)] = [:]
 
     /// A pain area: a soft glow across the skin (colour = intensity) with a small marker at its centre
     /// that pulses when the pain is recent. Pending areas (being picked) glow white.
@@ -193,15 +191,21 @@ final class BodySceneController {
         group.name = "spot.\(spot.id)"
         let color = spot.isPending ? UIColor.rgbWhite : Self.painColor(spot.intensity)
 
+        // The whole body area fills with colour (like a muscle map), with a faint glow around it.
         if patchMeshes[spot.id] == nil, let body = stockBody {
-            patchMeshes[spot.id] = Self.glowBands.compactMap { band in
-                body.painPatch(region: spot.id, scale: band.scale).flatMap { try? Self.meshResource($0, name: "patch.\(spot.id)") }
-            }
+            patchMeshes[spot.id] = (
+                body.regionPatch(spot.id).flatMap { try? Self.meshResource($0, name: "area.\(spot.id)") },
+                body.painPatch(region: spot.id, scale: 1.5, lift: 0.0015).flatMap { try? Self.meshResource($0, name: "glow.\(spot.id)") })
         }
-        for (mesh, band) in zip(patchMeshes[spot.id] ?? [], Self.glowBands) {
+        if let glow = patchMeshes[spot.id]?.glow {
             var m = UnlitMaterial(color: color)
-            m.blending = .transparent(opacity: .init(floatLiteral: spot.isPending ? band.opacity * 0.8 : band.opacity))
-            group.addChild(ModelEntity(mesh: mesh, materials: [m]))
+            m.blending = .transparent(opacity: .init(floatLiteral: 0.12))
+            group.addChild(ModelEntity(mesh: glow, materials: [m]))
+        }
+        if let area = patchMeshes[spot.id]?.area {
+            var m = UnlitMaterial(color: color)
+            m.blending = .transparent(opacity: .init(floatLiteral: spot.isPending ? 0.45 : 0.62))
+            group.addChild(ModelEntity(mesh: area, materials: [m]))
         }
 
         guard let coreMesh = Self.spotCore else { return group }

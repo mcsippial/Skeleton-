@@ -29,8 +29,8 @@ final class BodyViewModel {
     var isDescribeSheetPresented = false
 
     private(set) var stockBody: StockBody?
-    /// Front/back silhouettes for the Home preview (rendered once after the body loads).
-    private(set) var silhouettes: [BodyProjection.View: BodySilhouette] = [:]
+    /// Front/back segmented body maps for the Home preview (built once after the body loads).
+    private(set) var bodyMaps: [BodyProjection.View: BodyMapImage] = [:]
     var visibleLayers = Set(AnatomyLayer.allCases)
     /// 0 = skin invisible (full x-ray), 1 = solid skin.
     var skinOpacity: Double = 0.5
@@ -425,12 +425,15 @@ final class BodyViewModel {
     /// Builds the stock body fitted to the user's proportions off the main thread.
     func load(morph: BodyMorph = .identity) async {
         guard stockBody == nil else { return }
-        let atlas = data.atlas, skin = data.skin
+        let atlas = data.atlas, skin = data.skin, skinRegions = data.skinRegions
         // Licensed anatomy if it's in the build; otherwise the prototype anatomy.
         let inner = await AnatomyAssetLoader.load()
-        let body = await Task.detached(priority: .userInitiated) { StockBody(atlas: atlas, morph: morph, skin: skin, inner: inner) }.value
+        let body = await Task.detached(priority: .userInitiated) { StockBody(atlas: atlas, morph: morph, skin: skin, inner: inner, skinRegions: skinRegions) }.value
         stockBody = body
-        for view in BodyProjection.View.allCases { silhouettes[view] = BodySilhouette.render(body, view: view) }
+        for view in BodyProjection.View.allCases {
+            let map = await Task.detached(priority: .utility) { body.regionMap(view: view) }.value
+            bodyMaps[view] = BodyMapImage.render(map)
+        }
         setCamera(OrbitCamera(target: Vec3(0, 0.76 * morph.heightScale, 0), yaw: 0.6, pitch: 0.08,
                               distance: 3.7 * morph.heightScale), animated: false)
     }

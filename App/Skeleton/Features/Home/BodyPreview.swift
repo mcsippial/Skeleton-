@@ -1,50 +1,64 @@
 import SkeletonCore
 import SwiftUI
 
-/// A flat front or back view of the body, rendered once to an image.
-struct BodySilhouette {
+/// The segmented body map for one view: base image (grey areas, white seams) rendered once,
+/// plus the geometry to fill pain areas on top.
+struct BodyMapImage {
     let image: CGImage
-    let minX: Float, maxX: Float, minY: Float, maxY: Float
+    let map: RegionMap2D
 
-    var aspect: CGFloat { CGFloat((maxX - minX) / (maxY - minY)) }
+    var aspect: CGFloat { CGFloat((map.maxX - map.minX) / (map.maxY - map.minY)) }
 
-    /// Where a body-space point lands in a frame of `size` showing this silhouette.
-    func point(_ p: Vec3, view: BodyProjection.View, in size: CGSize) -> CGPoint {
-        let q = BodyProjection.project(p, view: view)
-        return CGPoint(x: CGFloat((q.x - minX) / (maxX - minX)) * size.width,
-                       y: (1 - CGFloat((q.y - minY) / (maxY - minY))) * size.height)
+    func areaPath(_ tris: [SIMD2<Float>], in size: CGSize) -> Path { Self.areaPath(tris, map, size) }
+    func seamPath(_ seams: [RegionMap2D.Seam], in size: CGSize) -> Path { Self.seamPath(seams, map, size) }
+
+    static func point(_ p: SIMD2<Float>, _ map: RegionMap2D, _ size: CGSize) -> CGPoint {
+        CGPoint(x: CGFloat((p.x - map.minX) / (map.maxX - map.minX)) * size.width,
+                y: (1 - CGFloat((p.y - map.minY) / (map.maxY - map.minY))) * size.height)
+    }
+
+    /// Filled triangles as one path.
+    static func areaPath(_ tris: [SIMD2<Float>], _ map: RegionMap2D, _ size: CGSize) -> Path {
+        var path = Path()
+        var i = 0
+        while i + 2 < tris.count {
+            path.move(to: point(tris[i], map, size))
+            path.addLine(to: point(tris[i + 1], map, size))
+            path.addLine(to: point(tris[i + 2], map, size))
+            path.closeSubpath()
+            i += 3
+        }
+        return path
+    }
+
+    static func seamPath(_ seams: [RegionMap2D.Seam], _ map: RegionMap2D, _ size: CGSize) -> Path {
+        var path = Path()
+        for s in seams {
+            path.move(to: point(s.a, map, size))
+            path.addLine(to: point(s.b, map, size))
+        }
+        return path
     }
 
     @MainActor
-    static func render(_ body: StockBody, view: BodyProjection.View) -> BodySilhouette? {
-        let tris = BodyProjection.silhouette(body.structures, view: view)
-        guard !tris.isEmpty else { return nil }
-        let xs = tris.map(\.x), ys = tris.map(\.y)
-        let (minX, maxX, minY, maxY) = (xs.min()!, xs.max()!, ys.min()!, ys.max()!)
+    static func render(_ map: RegionMap2D) -> BodyMapImage? {
+        guard map.maxY > map.minY else { return nil }
         let height: CGFloat = 420
-        let width = height * CGFloat((maxX - minX) / (maxY - minY))
-        let shape = Canvas { ctx, size in
-            func pt(_ p: SIMD2<Float>) -> CGPoint {
-                CGPoint(x: CGFloat((p.x - minX) / (maxX - minX)) * size.width, y: (1 - CGFloat((p.y - minY) / (maxY - minY))) * size.height)
-            }
-            var path = Path()
-            var i = 0
-            while i + 2 < tris.count {
-                path.move(to: pt(tris[i])); path.addLine(to: pt(tris[i + 1])); path.addLine(to: pt(tris[i + 2])); path.closeSubpath()
-                i += 3
-            }
-            ctx.fill(path, with: .linearGradient(Gradient(colors: [Color(hex: 0xE9E9EE), Color(hex: 0xDADAE1)]),
-                                                 startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
+        let width = height * CGFloat((map.maxX - map.minX) / (map.maxY - map.minY))
+        let all = map.triangles.values.flatMap { $0 }
+        let canvas = Canvas { ctx, size in
+            ctx.fill(areaPath(all, map, size), with: .color(Color(hex: 0xDEDEE4)))
+            ctx.stroke(seamPath(map.seams, map, size), with: .color(.white), lineWidth: 1.1)
         }
         .frame(width: width, height: height)
-        let renderer = ImageRenderer(content: shape)
+        let renderer = ImageRenderer(content: canvas)
         renderer.scale = 3
         guard let image = renderer.cgImage else { return nil }
-        return BodySilhouette(image: image, minX: minX, maxX: maxX, minY: minY, maxY: maxY)
+        return BodyMapImage(image: image, map: map)
     }
 }
 
-/// Front and back of the body with recent pain areas glowing. Tap to open the Body tab.
+/// Front and back of the body as a segmented map with recent pain areas filled. Tap to open the Body tab.
 struct BodyPreviewCard: View {
     let model: BodyViewModel
 
@@ -75,23 +89,21 @@ struct BodyPreviewCard: View {
     }
 
     @ViewBuilder private func figure(_ view: BodyProjection.View) -> some View {
-        if let s = model.silhouettes[view], let body = model.stockBody {
+        if let m = model.bodyMaps[view] {
             ZStack {
-                Image(decorative: s.image, scale: 3).resizable()
+                Image(decorative: m.image, scale: 3).resizable()
                 Canvas { ctx, size in
+                    // Fill each recent pain area, coloured by intensity, and keep its seams crisp.
                     for spot in model.spots {
-                        guard let region = model.data.atlas.region(spot.regionID), BodyProjection.shows(region, on: view),
-                              let anchor = body.anchor(ofRegion: spot.regionID) else { continue }
-                        let c = s.point(anchor, view: view, in: size)
-                        let r = CGFloat(region.radius) / CGFloat(s.maxY - s.minY) * size.height * 1.9
-                        let color = Theme.Color.pain(intensity: spot.intensity)
-                        ctx.fill(Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2)),
-                                 with: .radialGradient(Gradient(colors: [color.opacity(0.85), color.opacity(0.35), color.opacity(0)]),
-                                                       center: c, startRadius: 0, endRadius: r))
+                        guard let tris = m.map.triangles[spot.regionID] else { continue }
+                        ctx.fill(m.areaPath(tris, in: size), with: .color(Theme.Color.pain(intensity: spot.intensity)))
                     }
+                    let hot = Set(model.spots.map(\.regionID))
+                    let seams = m.map.seams.filter { hot.contains($0.regions.0 ?? "") || hot.contains($0.regions.1 ?? "") }
+                    ctx.stroke(m.seamPath(seams, in: size), with: .color(.white), lineWidth: 1.1)
                 }
             }
-            .aspectRatio(s.aspect, contentMode: .fit)
+            .aspectRatio(m.aspect, contentMode: .fit)
         } else {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
         }
