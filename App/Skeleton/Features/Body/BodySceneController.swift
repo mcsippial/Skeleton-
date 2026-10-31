@@ -19,6 +19,9 @@ final class BodySceneController {
     private var layerGroups: [AnatomyLayer: Entity] = [:]
     private var applied = AppliedState()
     private var cameraAnimation: AnimationPlaybackController?
+    /// Structures currently drawn with a non-base material (tapped or glowing).
+    private var tinted: Set<String> = []
+    private var flashReset: Task<Void, Never>?
     private let seamEntity = ModelEntity()
 
     private struct AppliedState {
@@ -124,18 +127,19 @@ final class BodySceneController {
         }
 
         if s.flashID != applied.flashID || s.glowIDs != applied.glowIDs {
-            var affected = applied.glowIDs.union(s.glowIDs)
-            for id in [applied.flashID, s.flashID].compactMap({ $0 }) { affected.insert(id) }
-            for id in affected {
-                guard let item = structures[id], item.layer != .skin else { continue }
-                let material: PhysicallyBasedMaterial
-                if id == s.flashID { material = BodyMaterials.tapped(for: item.layer) }
-                else if s.glowIDs.contains(id) { material = BodyMaterials.glowing(for: item.layer) }
-                else { material = BodyMaterials.base(for: item.layer) }
-                item.entity.model?.materials = [material]
-            }
             applied.flashID = s.flashID
             applied.glowIDs = s.glowIDs
+            applyHighlights()
+            if let id = s.flashID {
+                // The tap highlight clears itself here, so it never depends on another view update.
+                flashReset?.cancel()
+                flashReset = Task { @MainActor [weak self] in
+                    try? await Task.sleep(for: .seconds(1.6))
+                    guard let self, !Task.isCancelled, self.applied.flashID == id else { return }
+                    self.applied.flashID = nil
+                    self.applyHighlights()
+                }
+            }
         }
 
         updateSpots(s.spots)
@@ -220,6 +224,22 @@ final class BodySceneController {
     static func painColor(_ intensity: Int) -> UIColor {
         let k = CGFloat(min(max(intensity, 0), 10)) / 10
         return UIColor(hue: 0.11 - k * 0.11, saturation: 1, brightness: 1, alpha: 1)
+    }
+
+    /// Brings every structure's material in line with the applied flash and glow, resetting any
+    /// that were tinted before (so no highlight can be left behind).
+    private func applyHighlights() {
+        var wanted = applied.glowIDs
+        if let f = applied.flashID { wanted.insert(f) }
+        for id in tinted.union(wanted) {
+            guard let item = structures[id], item.layer != .skin else { continue }
+            let material: PhysicallyBasedMaterial
+            if id == applied.flashID { material = BodyMaterials.tapped(for: item.layer) }
+            else if applied.glowIDs.contains(id) { material = BodyMaterials.glowing(for: item.layer) }
+            else { material = BodyMaterials.base(for: item.layer) }
+            item.entity.model?.materials = [material]
+        }
+        tinted = wanted
     }
 
     // MARK: - Flow arcs
