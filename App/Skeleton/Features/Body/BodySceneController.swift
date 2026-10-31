@@ -195,7 +195,7 @@ final class BodySceneController {
 
     private var patchMeshes: [String: (area: MeshResource?, glow: MeshResource?)] = [:]
 
-    /// A pain area: the region filled with colour (= intensity) and a faint glow around it.
+    /// A pain area: the region filled with colour (= intensity).
     /// Pending areas (being picked) are white.
     private func makeSpot(_ spot: SpotRender) -> Entity {
         let group = Entity()
@@ -204,14 +204,8 @@ final class BodySceneController {
 
         // The whole body area fills with colour (like a muscle map), with a faint glow around it.
         if patchMeshes[spot.id] == nil, let body = stockBody {
-            patchMeshes[spot.id] = (
-                body.regionPatch(spot.id).flatMap { try? Self.meshResource($0, name: "area.\(spot.id)") },
-                body.painPatch(region: spot.id, scale: 1.5, lift: 0.0015).flatMap { try? Self.meshResource($0, name: "glow.\(spot.id)") })
-        }
-        if let glow = patchMeshes[spot.id]?.glow {
-            var m = UnlitMaterial(color: color)
-            m.blending = .transparent(opacity: .init(floatLiteral: 0.12))
-            group.addChild(ModelEntity(mesh: glow, materials: [m]))
+            // Just the area itself: the wider soft glow read as a stuck highlight over the muscles.
+            patchMeshes[spot.id] = (body.regionPatch(spot.id).flatMap { try? Self.meshResource($0, name: "area.\(spot.id)") }, nil)
         }
         if let area = patchMeshes[spot.id]?.area {
             var m = UnlitMaterial(color: color)
