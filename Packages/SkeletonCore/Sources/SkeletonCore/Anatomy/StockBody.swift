@@ -42,13 +42,15 @@ public struct StockBody: Sendable {
         hitTester = tester
         // Hit points are un-morphed and mapped against the reference rig, so this is the
         // same as mapping against the morphed rig with bone-length scaling.
-        mapper = AtlasMapper(atlas: atlas)
+        let atlasMapper = AtlasMapper(atlas: atlas)
+        mapper = atlasMapper
         byID = Dictionary(uniqueKeysWithValues: morphed.map { ($0.id, $0) })
         let skinMeshes = morphed.filter { $0.layer == .skin }.map(\.mesh)
         let points = skinMeshes.flatMap(\.positions), normals = skinMeshes.flatMap(\.normals)
         var anchors: [String: Vec3] = [:]
         for region in atlas.regions {
-            guard let a = mapper.anchor(of: region.id).map({ morph.apply($0) }) else { continue }
+            guard let raw = atlasMapper.anchor(of: region.id) else { continue }
+            let a = morph.apply(raw)
             var best = -1
             var bestD = Float.infinity
             for (i, p) in points.enumerated() {
@@ -80,7 +82,10 @@ public struct StockBody: Sendable {
             skinTriangleRegions = table.perTriangle()
         } else {
             // No matching table (e.g. a new scan): map each triangle like a tap would.
-            skinTriangleRegions = skinCentroids.map { mapper.region(at: morph.invert($0))?.regionID }
+            var regions: [String?] = []
+            regions.reserveCapacity(centroids.count)
+            for c in centroids { regions.append(atlasMapper.region(at: morph.invert(c))?.regionID) }
+            skinTriangleRegions = regions
         }
     }
 
