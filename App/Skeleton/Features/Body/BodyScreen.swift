@@ -243,6 +243,13 @@ struct BodyScreen: View {
                 .shadow(color: .black.opacity(0.08), radius: 20, y: -4)
                 .ignoresSafeArea(edges: .bottom)
         }
+        .onChange(of: panelExpanded) { _, open in
+            // Closing the drawer lets go of the selection, so nothing stays highlighted.
+            if !open, model.selection != nil || model.selectedSpot != nil || model.selectedEpisode != nil {
+                model.clearSelection()
+            }
+        }
+        .onDisappear { model.clearSelection() }
         .onChange(of: panelFocus) { _, focus in
             withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
                 panelExpanded = !focus.isEmpty

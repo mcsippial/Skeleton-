@@ -583,7 +583,7 @@ final class BodyViewModel {
         selection = nil
         // Every logged pain gets its own insight straight away (it links to its pattern, if any).
         selectedEpisode = nil
-        selectedSpot = entry.regionIDs.first
+        selectedSpot = nil
         show(.pain(entry.id))
     }
 
