@@ -29,6 +29,8 @@ final class BodyViewModel {
     var isDescribeSheetPresented = false
 
     private(set) var stockBody: StockBody?
+    /// Front/back silhouettes for the Home preview (rendered once after the body loads).
+    private(set) var silhouettes: [BodyProjection.View: BodySilhouette] = [:]
     var visibleLayers = Set(AnatomyLayer.allCases)
     /// 0 = skin invisible (full x-ray), 1 = solid skin.
     var skinOpacity: Double = 0.5
@@ -426,6 +428,7 @@ final class BodyViewModel {
         let atlas = data.atlas, skin = data.skin
         let body = await Task.detached(priority: .userInitiated) { StockBody(atlas: atlas, morph: morph, skin: skin) }.value
         stockBody = body
+        for view in BodyProjection.View.allCases { silhouettes[view] = BodySilhouette.render(body, view: view) }
         setCamera(OrbitCamera(target: Vec3(0, 0.76 * morph.heightScale, 0), yaw: 0.6, pitch: 0.08,
                               distance: 3.7 * morph.heightScale), animated: false)
     }

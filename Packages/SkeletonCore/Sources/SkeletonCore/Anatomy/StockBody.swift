@@ -22,6 +22,10 @@ public struct StockBody: Sendable {
 
     /// Pain-spot positions per region, snapped onto the skin (computed once).
     private let spotAnchors: [String: Vec3]
+    /// Skin triangles (morphed), with their centroids, for pain-area glow patches.
+    private let skinMesh: MeshData
+    private let skinCentroids: [Vec3]
+    private let atlasRegions: [String: BodyRegion]
 
     public init(atlas: BodyAtlas, morph: BodyMorph = .identity, skin: MeshData? = nil) {
         self.morph = morph
@@ -51,6 +55,39 @@ public struct StockBody: Sendable {
             anchors[region.id] = best >= 0 ? points[best] + normals[best] * 0.004 : a
         }
         spotAnchors = anchors
+        var merged = MeshData()
+        for m in skinMeshes { merged.append(m) }
+        skinMesh = merged
+        skinCentroids = stride(from: 0, to: merged.indices.count - 2, by: 3).map { i in
+            (merged.positions[Int(merged.indices[i])] + merged.positions[Int(merged.indices[i + 1])] + merged.positions[Int(merged.indices[i + 2])]) / 3
+        }
+        atlasRegions = Dictionary(uniqueKeysWithValues: atlas.regions.map { ($0.id, $0) })
+    }
+
+    /// The patch of skin around a region, lifted slightly off the surface, for a soft glow.
+    /// - Parameter scale: patch radius as a multiple of the region's atlas radius (scaled to this body).
+    public func painPatch(region id: String, scale: Float, lift: Float = 0.003) -> MeshData? {
+        guard let center = spotAnchors[id], let region = atlasRegions[id] else { return nil }
+        let r = region.radius * scale * morph.heightScale
+        let r2 = r * r
+        var out = MeshData()
+        var remap: [UInt32: UInt32] = [:]
+        for (t, c) in skinCentroids.enumerated() where (c - center).dotted(c - center) <= r2 {
+            for k in 0..<3 {
+                let old = skinMesh.indices[t * 3 + k]
+                if let n = remap[old] {
+                    out.indices.append(n)
+                } else {
+                    let n = UInt32(out.positions.count)
+                    remap[old] = n
+                    let normal = skinMesh.normals[Int(old)]
+                    out.positions.append(skinMesh.positions[Int(old)] + normal * lift)
+                    out.normals.append(normal)
+                    out.indices.append(n)
+                }
+            }
+        }
+        return out.indices.isEmpty ? nil : out
     }
 
     public func structure(_ id: String) -> AnatomyStructure? { byID[id] }

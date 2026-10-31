@@ -30,8 +30,11 @@ final class BodySceneController {
     }
 
     /// Builds entities for the stock body. Mesh generation must run on the main actor.
+    private var stockBody: StockBody?
+
     func build(_ body: StockBody) async {
         guard !applied.built else { return }
+        stockBody = body
         applied.built = true
         root.name = "Body"
 
@@ -161,7 +164,7 @@ final class BodySceneController {
             renderedSpots[id] = nil
         }
         for spot in spots where spotEntities[spot.id] == nil {
-            let entity = Self.makeSpot(spot)
+            let entity = makeSpot(spot)
             spotsRoot.addChild(entity)
             spotEntities[spot.id] = entity
             renderedSpots[spot.id] = spot
@@ -169,7 +172,6 @@ final class BodySceneController {
     }
 
     private static let spotCore = try? MeshResource.generate(from: [spotDescriptor(radius: 0.016, name: "spot-core")])
-    private static let spotHalo = try? MeshResource.generate(from: [spotDescriptor(radius: 0.045, name: "spot-halo")])
 
     private static func spotDescriptor(radius: Float, name: String) -> MeshDescriptor {
         let m = MeshBuilder.sphere(radius: radius, segments: 20, rings: 14)
@@ -180,35 +182,45 @@ final class BodySceneController {
         return d
     }
 
-    private static func makeSpot(_ spot: SpotRender) -> Entity {
+    /// Glow bands (patch scale × region radius, opacity): stacked, so the centre reads strongest.
+    private static let glowBands: [(scale: Float, opacity: Float)] = [(1.7, 0.13), (1.2, 0.17), (0.75, 0.24)]
+    private var patchMeshes: [String: [MeshResource]] = [:]
+
+    /// A pain area: a soft glow across the skin (colour = intensity) with a small marker at its centre
+    /// that pulses when the pain is recent. Pending areas (being picked) glow white.
+    private func makeSpot(_ spot: SpotRender) -> Entity {
         let group = Entity()
         group.name = "spot.\(spot.id)"
-        group.position = spot.position
-        guard let coreMesh = spotCore, let haloMesh = spotHalo else { return group }
+        let color = spot.isPending ? UIColor.rgbWhite : Self.painColor(spot.intensity)
 
-        let color = spot.isPending ? UIColor.rgbWhite : painColor(spot.intensity)
+        if patchMeshes[spot.id] == nil, let body = stockBody {
+            patchMeshes[spot.id] = Self.glowBands.compactMap { band in
+                body.painPatch(region: spot.id, scale: band.scale).flatMap { try? Self.meshResource($0, name: "patch.\(spot.id)") }
+            }
+        }
+        for (mesh, band) in zip(patchMeshes[spot.id] ?? [], Self.glowBands) {
+            var m = UnlitMaterial(color: color)
+            m.blending = .transparent(opacity: .init(floatLiteral: spot.isPending ? band.opacity * 0.8 : band.opacity))
+            group.addChild(ModelEntity(mesh: mesh, materials: [m]))
+        }
+
+        guard let coreMesh = Self.spotCore else { return group }
         var coreMaterial = UnlitMaterial(color: color)
         coreMaterial.blending = .transparent(opacity: .init(floatLiteral: 0.95))
         let core = ModelEntity(mesh: coreMesh, materials: [coreMaterial])
-        let scale = spot.isPending ? 1 : 0.8 + Float(spot.intensity) / 20
+        core.position = spot.position
+        let scale: Float = spot.isPending ? 0.7 : 0.5 + Float(spot.intensity) / 30
         core.scale = SIMD3(repeating: scale)
         group.addChild(core)
-
-        var haloMaterial = UnlitMaterial(color: spot.isPending ? UIColor(hex: 0x0B0B0C) : color)
-        haloMaterial.blending = .transparent(opacity: .init(floatLiteral: spot.isPending ? 0.18 : 0.28))
-        let halo = ModelEntity(mesh: haloMesh, materials: [haloMaterial])
-        let haloScale = spot.isPending ? 0.8 : 0.7 + Float(spot.intensity) / 14
-        halo.scale = SIMD3(repeating: haloScale)
-        group.addChild(halo)
 
         if spot.pulses {
             // Gentle pulse for recent pain.
             let pulse = FromToByAnimation<Transform>(
-                from: Transform(scale: SIMD3(repeating: haloScale * 0.85)),
-                to: Transform(scale: SIMD3(repeating: haloScale * 1.25)),
+                from: Transform(scale: SIMD3(repeating: scale * 0.8), translation: spot.position),
+                to: Transform(scale: SIMD3(repeating: scale * 1.3), translation: spot.position),
                 duration: 0.9, timing: .easeInOut, bindTarget: .transform, repeatMode: .autoReverse)
             if let resource = try? AnimationResource.generate(with: pulse) {
-                halo.playAnimation(resource)
+                core.playAnimation(resource)
             }
         }
         return group

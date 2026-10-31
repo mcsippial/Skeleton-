@@ -21,6 +21,7 @@ struct HomeView: View {
                                 isEmergency: flag.urgency == .emergency)
                 }
                 actions
+                BodyPreviewCard(model: model)
                 if let latest = model.latestEntry {
                     latestCard(latest)
                 } else {

@@ -86,3 +86,15 @@ final class SculptedSkinTests: XCTestCase {
         }
     }
 }
+
+final class PainPatchTests: XCTestCase {
+    func testPatchCoversTheRegionAndGrowsWithScale() throws {
+        let body = StockBody(atlas: Fixtures.data.atlas, skin: Fixtures.data.skin)
+        let small = try XCTUnwrap(body.painPatch(region: "lumbar_l", scale: 0.8))
+        let large = try XCTUnwrap(body.painPatch(region: "lumbar_l", scale: 1.6))
+        XCTAssertGreaterThan(large.triangleCount, small.triangleCount)
+        let anchor = try XCTUnwrap(body.anchor(ofRegion: "lumbar_l"))
+        XCTAssert(large.positions.allSatisfy { $0.distance(to: anchor) < 0.2 })
+        XCTAssert(large.indices.allSatisfy { Int($0) < large.positions.count })
+    }
+}
