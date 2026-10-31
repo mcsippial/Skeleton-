@@ -43,17 +43,13 @@ struct PainInsightView: View {
 
     private func header(_ i: PainInsight, _ e: PainEntry) -> some View {
         HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 8) {
-                SectionLabel("Your pain")
+            VStack(alignment: .leading, spacing: 4) {
                 Text(i.regionName)
                     .font(.system(size: 28, weight: .bold)).tracking(-0.7)
                     .fixedSize(horizontal: false, vertical: true)
-                FlowLayout(spacing: 6) {
-                    pill(e.painType.label)
-                    pill("\(e.intensity)/10", color: Theme.Color.pain(intensity: e.intensity))
-                    pill("Since \(e.onsetAt.formatted(.relative(presentation: .named)))")
-                    if let p = e.pattern { pill(p.label) }
-                }
+                Text("\(e.painType.label) · \(e.intensity)/10 · \(e.onsetAt.formatted(.relative(presentation: .named)))")
+                    .font(.system(size: 14))
+                    .foregroundStyle(Theme.Color.secondaryText)
             }
             Spacer(minLength: 12)
             Button { model.closePainInsight() } label: {
@@ -92,54 +88,24 @@ struct PainInsightView: View {
     }
 
     private func causes(_ i: PainInsight) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionLabel("Possible causes")
+        GlassCard(label: "Possible causes") {
             ForEach(i.factors.indices, id: \.self) { index in
                 let f = i.factors[index]
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(f.title).font(.system(size: 16, weight: .semibold))
-                        Spacer(minLength: 8)
-                        likelihood(index: index, confidence: f.confidence)
-                    }
+                if index > 0 { Divider().padding(.vertical, 4) }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(f.title).font(.system(size: 16, weight: .semibold))
                     Text(f.explanation)
                         .font(.system(size: 14))
-                        .foregroundStyle(Color(hex: 0x2A2A2E))
+                        .foregroundStyle(Theme.Color.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
-                    if !f.why.isEmpty {
-                        FlowLayout(spacing: 5) {
-                            ForEach(f.why, id: \.self) { reason in
-                                Label(reason, systemImage: "checkmark")
-                                    .font(.system(size: 11.5, weight: .medium))
-                                    .foregroundStyle(Theme.Color.text)
-                                    .padding(.horizontal, 8).padding(.vertical, 4)
-                                    .background(Capsule().fill(Theme.Color.track))
-                            }
-                        }
-                        .padding(.top, 2)
-                        .accessibilityLabel("Why: " + f.why.joined(separator: ", "))
-                    }
                 }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white.opacity(0.82)))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Color.black.opacity(0.05), lineWidth: 0.5))
+                .accessibilityElement(children: .combine)
             }
         }
     }
 
-    private func likelihood(index: Int, confidence: Double) -> some View {
-        let (text, strong) = index == 0 && confidence >= 0.55 ? ("Most likely", true)
-            : confidence >= 0.4 ? ("Possible", false) : ("Less likely", false)
-        return Text(text)
-            .font(.system(size: 11, weight: .semibold))
-            .foregroundStyle(strong ? .white : Theme.Color.secondaryText)
-            .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(Capsule().fill(strong ? Theme.Color.text : Theme.Color.track))
-    }
-
     private func questions(_ i: PainInsight) -> some View {
-        GlassCard(label: "Help narrow it down") {
+        GlassCard(label: "Quick questions") {
             ForEach(i.questions.prefix(3)) { q in
                 VStack(alignment: .leading, spacing: 8) {
                     Text(q.question).font(.system(size: 14.5, weight: .medium)).fixedSize(horizontal: false, vertical: true)
@@ -254,21 +220,13 @@ struct PainInsightView: View {
     }
 
     private func footer(_ i: PainInsight) -> some View {
-        Text((i.isRulesOnly ? "From Skeleton's guides. " : "AI-written, safety-checked. ") + Insight.disclaimer)
+        Text(Insight.disclaimer)
         .font(.system(size: 11))
         .foregroundStyle(Theme.Color.secondaryText)
         .padding(.top, 4)
     }
 
     // MARK: Pieces
-
-    private func pill(_ text: String, color: Color? = nil) -> some View {
-        Text(text)
-            .font(.system(size: 12.5, weight: .semibold))
-            .foregroundStyle(color == nil ? Theme.Color.text : .white)
-            .padding(.horizontal, 10).padding(.vertical, 5)
-            .background(Capsule().fill(color ?? Theme.Color.track))
-    }
 
     private func row(_ text: String, icon: String, tint: Color) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 10) {
