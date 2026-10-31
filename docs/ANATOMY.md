@@ -57,3 +57,7 @@ bash tools/anatomy/get_z_anatomy.sh
 ```
 
 Downloads [Z-Anatomy](https://github.com/Z-Anatomy/Models-of-human-anatomy) and runs the same preparation. Z-Anatomy is CC BY-SA 4.0 (attribution: Z-Anatomy, by Lluís Vinent / Gauthier Kervyn, based on BodyParts3D). Its share-alike terms make it **prototype/TestFlight only**; swap in a commercially licensed model before the App Store.
+
+## Skin
+
+If the model has a whole-body skin (Z-Anatomy does), the import brings it as the `skin` layer and the app uses it instead of the stock skin, so the outside matches the muscles and bones. The 120 pain areas are copied from the stock skin onto it (nearest triangle, then smoothed). The same step will fit the areas onto a scanned body in Phase 4.

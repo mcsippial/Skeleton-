@@ -25,6 +25,7 @@ public struct StockBody: Sendable {
     /// Skin triangles (morphed), with their centroids, for pain-area glow patches.
     private let skinMesh: MeshData
     private let skinCentroids: [Vec3]
+    private let centroidGrid: PointGrid
     /// Atlas region of each skin triangle (precomputed table when it matches, else computed here).
     let skinTriangleRegions: [String?]
     var skinMeshForMap: MeshData { skinMesh }
@@ -33,7 +34,10 @@ public struct StockBody: Sendable {
     public init(atlas: BodyAtlas, morph: BodyMorph = .identity, skin: MeshData? = nil, inner: [AnatomyStructure]? = nil,
                 skinRegions: SkinRegionTable? = nil) {
         self.morph = morph
-        let morphed = StockAnatomy.build(skin: skin, inner: inner).map {
+        // Imported anatomy may bring its own skin, which matches its muscles and bones exactly.
+        let importedSkinParts = (inner ?? []).filter { $0.layer == .skin }.map(\.mesh)
+        let importedSkin: MeshData? = importedSkinParts.isEmpty ? nil : MeshData.welded(importedSkinParts)
+        let morphed = StockAnatomy.build(skin: importedSkin ?? skin, inner: inner).map {
             AnatomyStructure(id: $0.id, name: $0.name, layer: $0.layer, info: $0.info, mesh: morph.apply(to: $0.mesh))
         }
         structures = morphed
@@ -76,10 +80,34 @@ public struct StockBody: Sendable {
             ti += 3
         }
         skinCentroids = centroids
+        centroidGrid = PointGrid(centroids, cell: 0.02)
         atlasRegions = Dictionary(uniqueKeysWithValues: atlas.regions.map { ($0.id, $0) })
         let triCount = merged.indices.count / 3
-        if let table = skinRegions, table.triangleCount == triCount, table.atlasVersion == atlas.version {
+        if importedSkin == nil, let table = skinRegions, table.triangleCount == triCount, table.atlasVersion == atlas.version {
             skinTriangleRegions = table.perTriangle()
+        } else if importedSkin != nil, let stock = skin, let table = skinRegions,
+                  table.triangleCount == stock.triangleCount, table.atlasVersion == atlas.version {
+            // Copy the pain areas from the stock skin: each new triangle takes the area of the
+            // nearest stock triangle (both bodies stand in the same reference space).
+            let stockRegions = table.perTriangle()
+            var stockCentroids: [Vec3] = []
+            stockCentroids.reserveCapacity(stock.triangleCount)
+            var si = 0
+            while si + 2 < stock.indices.count {
+                let a: Vec3 = stock.positions[Int(stock.indices[si])]
+                let b: Vec3 = stock.positions[Int(stock.indices[si + 1])]
+                let c: Vec3 = stock.positions[Int(stock.indices[si + 2])]
+                stockCentroids.append((a + b + c) / 3)
+                si += 3
+            }
+            let grid = PointGrid(stockCentroids, cell: 0.02)
+            var regions: [String?] = []
+            regions.reserveCapacity(centroids.count)
+            for c in centroids {
+                let i = grid.nearest(to: morph.invert(c), maxDistance: 0.25)
+                regions.append(i.flatMap { $0 < stockRegions.count ? stockRegions[$0] : nil })
+            }
+            skinTriangleRegions = Self.smoothed(regions, mesh: merged)
         } else {
             // No matching table (e.g. a new scan): map each triangle like a tap would.
             var regions: [String?] = []
@@ -138,7 +166,41 @@ public struct StockBody: Sendable {
 
     /// Region for any point in body space.
     public func region(at point: Vec3) -> RegionHit? {
-        mapper.region(at: morph.invert(point))
+        // On or near the skin: the area of the skin there, so taps match the drawn areas.
+        if let i = centroidGrid.nearest(to: point, maxDistance: 0.05), i < skinTriangleRegions.count,
+           let id = skinTriangleRegions[i] {
+            return RegionHit(regionID: id, score: 0, point: morph.invert(point))
+        }
+        return mapper.region(at: morph.invert(point))
+    }
+
+    /// Cleans up speckles after an area transfer: a triangle whose neighbours mostly agree on
+    /// another area joins it.
+    static func smoothed(_ input: [String?], mesh: MeshData, passes: Int = 2) -> [String?] {
+        var edgeTris: [UInt64: [Int]] = [:]
+        let triCount = mesh.indices.count / 3
+        for t in 0..<triCount {
+            for k in 0..<3 {
+                let u = mesh.indices[t * 3 + k], v = mesh.indices[t * 3 + (k + 1) % 3]
+                edgeTris[UInt64(min(u, v)) << 32 | UInt64(max(u, v)), default: []].append(t)
+            }
+        }
+        var neighbours = [[Int]](repeating: [], count: triCount)
+        for tris in edgeTris.values where tris.count == 2 {
+            neighbours[tris[0]].append(tris[1])
+            neighbours[tris[1]].append(tris[0])
+        }
+        var regions = input
+        for _ in 0..<passes {
+            var next = regions
+            for t in 0..<min(triCount, regions.count) {
+                var counts: [String: Int] = [:]
+                for n in neighbours[t] where n < regions.count { if let r = regions[n] { counts[r, default: 0] += 1 } }
+                if let best = counts.max(by: { $0.value < $1.value }), best.value >= 2, best.key != regions[t] { next[t] = best.key }
+            }
+            regions = next
+        }
+        return regions
     }
 
     /// Where a region's pain spot should be drawn on this body: the atlas anchor moved onto the

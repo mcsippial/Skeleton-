@@ -96,6 +96,23 @@ def curves_to_meshes():
         new.name = name
 
 
+SKIN_BUDGET = 90_000
+
+
+def pick_skin(meshes):
+    """Whole-body skin objects: named skin, and (nearly) as tall as the tallest of them."""
+    def height(o):
+        zs = [(o.matrix_world @ Vector(c)) for c in o.bound_box]
+        ext = [max(v[i] for v in zs) - min(v[i] for v in zs) for i in range(3)]
+        return max(ext)
+    named = [o for o in meshes if re.search(r"\b(skin|integument)\b", o.name, re.I) and len(o.data.polygons) > 100]
+    preferred = [o for o in named if is_structure_name(o.name)] or named
+    if not preferred:
+        return []
+    tallest = max(height(o) for o in preferred)
+    return [o for o in preferred if height(o) >= 0.6 * tallest]
+
+
 def is_structure_name(name):
     """Z-Anatomy suffixes: .l/.r are the structures; other dotted suffixes are helpers."""
     m = re.search(r"\.([A-Za-z0-9]+)$", name)
@@ -149,6 +166,11 @@ def main():
     xs = [(o.matrix_world @ Vector(c)).x for o in meshes for c in o.bound_box]
     mid_x = (min(xs) + max(xs)) / 2 if xs else 0
 
+    # The atlas's own skin matches its insides exactly, so bring it too (layer "skin").
+    skin = pick_skin(meshes)
+    meshes = [o for o in meshes if o not in skin]
+    (out / "anatomy-objects.txt").write_text("\n".join(sorted(o.name for o in meshes + skin)) + "\n")
+
     kept, skipped = [], []
     for o in meshes:
         ov = overrides.get(o.name)
@@ -185,6 +207,18 @@ def main():
             bpy.ops.object.modifier_apply(modifier=m.name)
     after = sum(triangles(o) for o, _ in kept)
 
+    # Skin has its own budget: smooth enough to look good, light enough to tap-test.
+    skin_before = sum(triangles(o) for o in skin)
+    skin_ratio = min(1.0, SKIN_BUDGET / max(skin_before, 1))
+    for o in skin:
+        make_editable(o)
+        if skin_ratio < 1:
+            m = o.modifiers.new("skeleton_decimate", "DECIMATE")
+            m.ratio = max(skin_ratio, 0.02)
+            bpy.context.view_layer.objects.active = o
+            bpy.ops.object.modifier_apply(modifier=m.name)
+    kept += [(o, {"id": "skin", "layer": "skin", "name": "Skin"}) for o in skin]
+
     # Stable prim names; the manifest carries the meaning.
     manifest = []
     for i, (o, info) in enumerate(kept, 1):
@@ -216,6 +250,8 @@ def main():
         f"Kept {len(manifest)} structures ({', '.join(f'{v} {k}' for k, v in sorted(by_layer.items()))}); left out {len(skipped)}.",
         f"Triangles: {before:,} → {after:,} (budget {a.budget:,}).",
         f"Pathway structures found: {len(need) - len(missing)}/{len(need)}.",
+        (f"Skin: {', '.join(o.name for o in skin)} ({skin_before:,} → {sum(triangles(o) for o in skin):,} triangles)."
+         if skin else "Skin: none found; the app keeps its own skin."),
     ]
     if missing:
         lines.append("Missing (pathways will still work; these structures just won't glow): " + ", ".join(missing))
@@ -223,7 +259,7 @@ def main():
     lines.append("")
     lines.append("Left out: " + ", ".join(sorted(skipped)[:200]) + (" …" if len(skipped) > 200 else ""))
     (out / "anatomy-report.txt").write_text("\n".join(lines) + "\n")
-    print("\n".join(lines[:5]))
+    print("\n".join(lines[:6]))
     print(f"Wrote {usdz}")
 
 
