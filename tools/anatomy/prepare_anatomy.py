@@ -96,6 +96,12 @@ def curves_to_meshes():
         new.name = name
 
 
+def is_structure_name(name):
+    """Z-Anatomy suffixes: .l/.r are the structures; other dotted suffixes are helpers."""
+    m = re.search(r"\.([A-Za-z0-9]+)$", name)
+    return not m or m.group(1).lower() in ("l", "r") or m.group(1).isdigit()
+
+
 def drop_off_body(kept):
     """Atlas files put text labels and leader lines beside the body, often named after the
     structure they point at. Drop anything whose centre is outside the skeleton's envelope."""
@@ -148,9 +154,9 @@ def main():
         ov = overrides.get(o.name)
         if ov == "skip":
             skipped.append(o.name); continue
-        # Atlas helpers, not anatomy: label/leader-line objects ("Ribs.j", "Sternum.t") and
-        # meshes with (almost) no faces.
-        if not ov and (re.search(r"\.[a-km-qs-z]$", o.name, re.I) or len(o.data.polygons) < 4):
+        # Atlas helpers, not anatomy: Z-Anatomy groups (".j", ".g"), landmarks (".i"), muscle
+        # origin/insertion patches (".ol", ".er", ".e1r") and meshes with (almost) no faces.
+        if not ov and (not is_structure_name(o.name) or len(o.data.polygons) < 4):
             skipped.append(o.name); continue
         cx = sum((o.matrix_world @ Vector(c)).x for c in o.bound_box) / 8 - mid_x
         info = ov or classify(o.name, cx)

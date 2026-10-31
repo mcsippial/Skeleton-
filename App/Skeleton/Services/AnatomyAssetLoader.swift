@@ -13,7 +13,8 @@ enum AnatomyAssetLoader {
               let manifest = try? AnatomyManifest.load(from: Data(contentsOf: manifestURL)) else { return nil }
         do {
             let root = try await Entity(contentsOf: usdz)
-            let byPrim = Dictionary(manifest.structures.map { ($0.prim, $0) }, uniquingKeysWith: { a, _ in a })
+            let entries = manifest.structures.filter(isAnatomy)
+            let byPrim = Dictionary(entries.map { ($0.prim, $0) }, uniquingKeysWith: { a, _ in a })
             var meshes: [String: MeshData] = [:]   // structure ID → merged mesh
             visit(root) { entity in
                 guard let model = entity.components[ModelComponent.self],
@@ -22,7 +23,7 @@ enum AnatomyAssetLoader {
                 meshes[entry.id, default: MeshData()].append(m)
             }
             var seen = Set<String>()
-            let structures = manifest.structures.compactMap { e -> AnatomyStructure? in
+            let structures = entries.compactMap { e -> AnatomyStructure? in
                 guard seen.insert(e.id).inserted, let mesh = meshes[e.id], !mesh.indices.isEmpty else { return nil }
                 return AnatomyStructure(id: e.id, name: e.name, layer: e.layer, mesh: mesh)
             }
@@ -31,6 +32,23 @@ enum AnatomyAssetLoader {
             print("Anatomy asset failed to load: \(error). Using prototype anatomy.")
             return nil
         }
+    }
+
+    /// Leaves out atlas helpers that older imports let through: Z-Anatomy groups (".j"),
+    /// landmarks (".i"), origin/insertion patches (".ol", ".e1r"…) and broad fascia sheets,
+    /// which sit beside the body or cover the muscles.
+    static func isAnatomy(_ e: AnatomyManifest.Entry) -> Bool {
+        let source = (e.source ?? "").lowercased()
+        if let dot = source.lastIndex(of: ".") {
+            let suffix = source[source.index(after: dot)...]
+            if !(suffix == "l" || suffix == "r" || suffix.allSatisfy(\.isNumber)) && !suffix.contains(" ") { return false }
+        }
+        if e.layer == .tendons,
+           source.range(of: "fascia|aponeurosis|retinacul", options: .regularExpression) != nil,
+           source.range(of: "plantar|iliotibial", options: .regularExpression) == nil {
+            return false
+        }
+        return true
     }
 
     private static func visit(_ e: Entity, _ body: (Entity) -> Void) {
