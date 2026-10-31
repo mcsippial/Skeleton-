@@ -69,6 +69,8 @@ MIDLINE = {"cord", "mandible", "sacrum", "skull"}
 
 SKIP = r"\b(skin|body\s*surface|integument|artery|arteries|vein|venous|vessel|aorta|heart|lung|liver|kidney|spleen|stomach|intestin|colon|bladder|brain|eye|organ|lymph|fat|teeth|tooth|tongue|cartilage\s*of\s*nose)\b"
 
+SHEETS = r"\b(fascia|fasciae|fascial|aponeurosis|retinaculum|retinacula|subcutaneous|superficial)\b"
+
 LAYER_HINTS = [
     ("nerves", r"nerve|plexus|ganglion|\bn\.\s|nervus|cord"),
     ("tendons", r"tendon|ligament|fascia|aponeurosis|retinaculum|\blig\.|menisc|bursa|capsule"),
@@ -120,6 +122,9 @@ def classify(name: str, centroid_x: float | None = None) -> dict | None:
                 return {"id": stem, "layer": layer, "name": _display(name, None), "known": True}
             s = side or ("l" if (centroid_x or 0) >= 0 else "r")
             return {"id": f"{stem}_{s}", "layer": layer, "name": _display(name, s), "known": True}
+    # Broad fascia sheets wrap whole limbs and hide the muscles; the useful ones are matched above.
+    if re.search(SHEETS, n):
+        return None
     layer = next((l for l, pat in LAYER_HINTS if re.search(pat, n)), None)
     if layer is None:
         return None

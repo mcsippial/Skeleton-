@@ -96,6 +96,27 @@ def curves_to_meshes():
         new.name = name
 
 
+def drop_off_body(kept):
+    """Atlas files put text labels and leader lines beside the body, often named after the
+    structure they point at. Drop anything whose centre is outside the skeleton's envelope."""
+    def centre(o):
+        return sum((o.matrix_world @ Vector(c) for c in o.bound_box), Vector()) / 8
+    bones = [centre(o) for o, info in kept if info["layer"] == "bones"]
+    if len(bones) < 20:
+        return kept, []
+    lo, hi = Vector(), Vector()
+    for axis in range(3):
+        vals = sorted(c[axis] for c in bones)
+        a, b = vals[int(len(vals) * 0.01)], vals[int(len(vals) * 0.99) - 1]
+        pad = (b - a) * 0.15
+        lo[axis], hi[axis] = a - pad, b + pad
+    inside, outside = [], []
+    for o, info in kept:
+        c = centre(o)
+        (inside if all(lo[i] <= c[i] <= hi[i] for i in range(3)) else outside).append((o, info))
+    return inside, [o.name + " (off body)" for o, _ in outside]
+
+
 def make_editable(o):
     """Shape keys block applying modifiers; drop them (we only need the rest pose)."""
     if o.data.users > 1:
@@ -133,6 +154,8 @@ def main():
             skipped.append(o.name); continue
         kept.append((o, info))
 
+    kept, off_body = drop_off_body(kept)
+    skipped += off_body
     kept_names = {k[0].name for k in kept}
     for o in meshes:
         if o.name not in kept_names:
