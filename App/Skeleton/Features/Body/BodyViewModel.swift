@@ -42,7 +42,10 @@ final class BodyViewModel {
     private(set) var preset: ViewPreset = .front
 
     private var dragStart: OrbitCamera?
-    private var zoomStart: Float?
+    /// Camera and the point under the fingers when a pinch began.
+    private var zoomStart: (camera: OrbitCamera, focus: Vec3?)?
+    /// After a pinch, ignore the rest of that touch's drag so the body doesn't spin.
+    private var suppressDrag = false
     private var tooltipTask: Task<Void, Never>?
     private var flashTask: Task<Void, Never>?
 
@@ -538,24 +541,62 @@ final class BodyViewModel {
 
     // MARK: Camera gestures
 
+    /// The whole-body framing everything zooms back out to.
+    var homeCamera: OrbitCamera {
+        let h = stockBody?.morph.heightScale ?? 1
+        return OrbitCamera(target: Vec3(0, 0.76 * h, 0), yaw: camera.yaw, pitch: camera.pitch, distance: 3.7 * h)
+    }
+
+    /// Zoomed in noticeably, so the "back to whole body" button shows.
+    var isZoomedIn: Bool { camera.distance < homeCamera.distance * 0.75 }
+
     func drag(translation: CGSize) {
+        guard zoomStart == nil, !suppressDrag else { return }
         if dragStart == nil { dragStart = camera }
         guard var c = dragStart else { return }
-        c.orbit(dx: Float(translation.width) * 0.008, dy: Float(translation.height) * 0.006)
+        // Slower rotation when close, so small movements stay precise.
+        let k = min(1, max(0.35, c.distance / homeCamera.distance))
+        c.orbit(dx: Float(translation.width) * 0.008 * k, dy: Float(translation.height) * 0.006 * k)
         setCamera(c, animated: false)
     }
 
-    func endDrag() { dragStart = nil }
+    func endDrag() {
+        dragStart = nil
+        suppressDrag = false
+    }
 
-    func pinch(magnification: CGFloat) {
-        if zoomStart == nil { zoomStart = camera.distance }
+    /// - Parameter ray: ray through the point between the fingers, to zoom towards what's there.
+    func pinch(magnification: CGFloat, ray: Ray?) {
+        if zoomStart == nil {
+            dragStart = nil
+            suppressDrag = true
+            let focus = ray.flatMap { r in stockBody?.tap(r, visibleLayers: visibleLayers, skinOpacity: Float(skinOpacity))?.point }
+            zoomStart = (camera, focus)
+        }
         guard let start = zoomStart else { return }
-        var c = camera
-        c.zoom(to: start / Float(max(magnification, 0.01)))
+        let home = homeCamera
+        var c = start.camera
+        c.zoom(to: start.camera.distance / Float(max(magnification, 0.01)))
+        if c.distance < start.camera.distance, let focus = start.focus {
+            // Zooming in: glide the target towards the point under the fingers.
+            let span = max(start.camera.distance - OrbitCamera.distanceRange.lowerBound, 0.01)
+            let t = min(1, (start.camera.distance - c.distance) / span)
+            c.target = start.camera.target + (focus - start.camera.target) * t
+        } else if c.distance > start.camera.distance {
+            // Zooming out: drift back to the whole-body framing.
+            let span = max(home.distance - start.camera.distance, 0.01)
+            let t = min(1, (c.distance - start.camera.distance) / span)
+            c.target = start.camera.target + (home.target - start.camera.target) * t
+        }
         setCamera(c, animated: false)
     }
 
     func endPinch() { zoomStart = nil }
+
+    /// Back to the whole body, keeping the current angle.
+    func zoomOutToBody() {
+        setCamera(homeCamera, animated: true)
+    }
 
     func focusSelection() {
         guard let point = selection?.region.flatMap({ stockBody?.anchor(ofRegion: $0.id) }) ?? selection?.point else { return }

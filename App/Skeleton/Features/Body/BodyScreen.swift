@@ -42,7 +42,16 @@ struct BodyScreen: View {
                 HStack(alignment: .center) {
                     LayerRail(visible: model.visibleLayers) { model.toggle($0) }
                     Spacer()
-                    XRaySlider(value: Bindable(model).skinOpacity)
+                    VStack(spacing: 10) {
+                        if model.isZoomedIn {
+                            CircleIconButton(systemImage: "arrow.down.right.and.arrow.up.left", label: "Back to whole body") {
+                                model.zoomOutToBody()
+                            }
+                            .transition(.scale.combined(with: .opacity))
+                        }
+                        XRaySlider(value: Bindable(model).skinOpacity)
+                    }
+                    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: model.isZoomedIn)
                 }
                 .padding(.horizontal, 12)
                 .frame(maxHeight: .infinity)

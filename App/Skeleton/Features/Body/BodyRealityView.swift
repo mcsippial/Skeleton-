@@ -26,7 +26,11 @@ struct BodyRealityView: View {
             )
             .simultaneousGesture(
                 MagnifyGesture()
-                    .onChanged { model.pinch(magnification: $0.magnification) }
+                    .onChanged { value in
+                        // The point between the fingers (startAnchor is unit coordinates in the view).
+                        let p = CGPoint(x: value.startAnchor.x * geo.size.width, y: value.startAnchor.y * geo.size.height)
+                        model.pinch(magnification: value.magnification, ray: controller.ray(at: p, in: geo.size))
+                    }
                     .onEnded { _ in model.endPinch() }
             )
             .simultaneousGesture(

@@ -10,7 +10,7 @@ struct OrbitCamera: Equatable {
     var distance: Float
     var fieldOfView: Float = 34
 
-    static let distanceRange: ClosedRange<Float> = 0.5...6
+    static let distanceRange: ClosedRange<Float> = 0.45...6
     static let pitchRange: ClosedRange<Float> = -1.2...1.2
 
     var position: Vec3 {
