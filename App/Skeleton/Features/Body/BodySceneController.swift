@@ -20,7 +20,8 @@ final class BodySceneController {
     private var applied = AppliedState()
     private var cameraAnimation: AnimationPlaybackController?
     /// Structures currently drawn with a non-base material (tapped or glowing).
-    private var tinted: Set<String> = []
+    /// The highlight overlays currently on the body. Every change removes all of them first.
+    private var overlays: [Entity] = []
     private let seamEntity = ModelEntity()
 
     private struct AppliedState {
@@ -211,22 +212,30 @@ final class BodySceneController {
         return UIColor(hue: 0.11 - k * 0.11, saturation: 1, brightness: 1, alpha: 1)
     }
 
-    /// The one place body parts get highlighted. Called directly whenever the selection changes
-    /// (not from RealityView's update pass, which doesn't always run): the selected part is
-    /// highlighted, parts on an opened pain pathway glow, and every other part that was tinted
-    /// before goes back to normal.
+    /// The one place body parts get highlighted. Body parts' own materials are never changed:
+    /// a highlight is a translucent copy of the part laid just over it. Every call removes all
+    /// existing highlights first, then adds the selected part (teal) and any parts on an opened
+    /// pain pathway (orange), so nothing can be left highlighted.
     func setHighlights(selected: String?, glowing: Set<String>) {
-        var wanted = glowing
-        if let selected { wanted.insert(selected) }
-        for id in tinted.union(wanted) {
-            guard let item = structures[id], item.layer != .skin else { continue }
-            let material: PhysicallyBasedMaterial
-            if id == selected { material = BodyMaterials.tapped(for: item.layer) }
-            else if glowing.contains(id) { material = BodyMaterials.glowing(for: item.layer) }
-            else { material = BodyMaterials.base(for: item.layer) }
-            item.entity.model?.materials = [material]
+        for o in overlays { o.removeFromParent() }
+        overlays.removeAll()
+        var ids = glowing
+        if let selected { ids.insert(selected) }
+        for id in ids {
+            guard let item = structures[id], item.layer != .skin, let mesh = item.entity.model?.mesh else { continue }
+            var m = UnlitMaterial(color: id == selected ? UIColor(hex: 0x1D8C74) : UIColor(hex: 0xFF6A3D))
+            m.blending = .transparent(opacity: .init(floatLiteral: id == selected ? 0.5 : 0.4))
+            let overlay = ModelEntity(mesh: mesh, materials: [m])
+            overlay.name = "highlight.\(id)"
+            // Slightly larger than the part, about its centre, so it sits on top of it.
+            let centre = item.entity.visualBounds(relativeTo: item.entity).center
+            let k: Float = 1.01
+            overlay.scale = SIMD3(repeating: k)
+            overlay.position = centre * (1 - k)
+            // A child of the part, so it hides with the part's layer.
+            item.entity.addChild(overlay)
+            overlays.append(overlay)
         }
-        tinted = wanted
     }
 
     // MARK: - Flow arcs
