@@ -64,6 +64,9 @@ Every body model, stock or scanned, must map onto **one canonical body-region at
 
 ## 5. Core features
 
+### 5.0 Navigation
+Three tabs: **Home** (front page: warnings, log pain, latest pain and its one-line answer, pain patterns, recent pains, today's health), **Body** (the 3D body), **History** (all pains by day). Pain and pattern insights are pushed pages with a standard back button; logging and describing are quick modal sheets available from any tab.
+
 ### 5.1 Onboarding
 Account → demographics (age, sex, height, weight, activity level, relevant history the user chooses to add) → body scan (or stock body adjusted to height/weight/sex) → optional health-app connections.
 

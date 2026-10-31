@@ -4,13 +4,14 @@ import SwiftUI
 /// Pain patterns: pains that appeared close together in areas a known pathway connects.
 struct EpisodesCard: View {
     let model: BodyViewModel
+    let onSelect: (Episode) -> Void
 
     var body: some View {
         let episodes = model.episodes
         if !episodes.isEmpty {
             GlassCard(label: "Pain patterns") {
                 ForEach(episodes) { ep in
-                    Button { model.open(ep) } label: {
+                    Button { onSelect(ep) } label: {
                         HStack(spacing: 10) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(ep.title).font(.system(size: 15, weight: .semibold))
@@ -47,13 +48,17 @@ struct EpisodesCard: View {
 struct InsightCard: View {
     let model: BodyViewModel
     let episode: Episode
+    /// On its own page there's no body to replay on and Back replaces Close.
+    var inPage = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
-            GlassCard(label: "Watch it move") {
-                ReplayScrubber(model: model, episode: episode)
-                if !model.metricsOnDisplayDate.isEmpty {
-                    MetricStrip(values: model.metricsOnDisplayDate)
+            if !inPage {
+                GlassCard(label: "Watch it move") {
+                    ReplayScrubber(model: model, episode: episode)
+                    if !model.metricsOnDisplayDate.isEmpty {
+                        MetricStrip(values: model.metricsOnDisplayDate)
+                    }
                 }
             }
             if let insight = model.insight {
@@ -132,9 +137,11 @@ struct InsightCard: View {
                 .font(.system(size: 11))
                 .foregroundStyle(Theme.Color.secondaryText)
                 .padding(.top, 6)
-            Button("Close") { model.closeEpisode() }
-                .buttonStyle(.secondaryPill)
-                .padding(.top, 4)
+            if !inPage {
+                Button("Close") { model.closeEpisode() }
+                    .buttonStyle(.secondaryPill)
+                    .padding(.top, 4)
+            }
         }
     }
 

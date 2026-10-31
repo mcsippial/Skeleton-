@@ -1,12 +1,11 @@
 import SkeletonCore
 import SwiftUI
 
-/// Home: the user's body with layer toggles, x-ray, tap-to-identify and region mapping.
+/// Body tab: the 3D body with layer toggles, x-ray, tap-to-identify, logging and pain patterns.
 /// Mirrors the interactions in `docs/preview/index.html`.
 struct BodyScreen: View {
     @Environment(AppModel.self) private var app
-    @State private var model: BodyViewModel
-    @State private var showGallery = false
+    let model: BodyViewModel
     @State private var panelContentHeight: CGFloat = 0
     /// Sheet positions: closed (summary line), half (expanded), full (panelFull).
     @State private var panelExpanded = false
@@ -14,19 +13,7 @@ struct BodyScreen: View {
     @State private var screenHeight: CGFloat = 800
     @AppStorage("bodyHintSeen") private var hintSeen = false
 
-    @State private var showProfile = false
-    @State private var reportURL: URL?
-    @State private var reportError: String?
-    private let profile: Profile
-
-    init(app: AppModel, profile: Profile) {
-        self.profile = profile
-        _model = State(initialValue: BodyViewModel(data: app.data, pain: app.pain, insights: app.insights,
-                                                   painInsights: app.painInsights,
-                                                   parser: app.parser, health: app.health,
-                                                   healthConnected: app.isHealthConnected(profile.userID),
-                                                   profile: profile))
-    }
+    let profile: Profile
 
     var body: some View {
         ZStack {
@@ -71,113 +58,19 @@ struct BodyScreen: View {
         .animation(.spring(response: 0.4, dampingFraction: 0.85), value: model.isPickingSpots)
         .onChange(of: model.tooltip?.title) { _, title in if title != nil { hintSeen = true } }
         .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { screenHeight = $0 }
-        .task {
-            async let bodyLoad: Void = model.load(morph: profile.morph)
-            async let historyLoad: Void = model.loadEntries()
-            _ = await (bodyLoad, historyLoad)
-            await model.loadHealth()
-        }
-        .sheet(isPresented: $showGallery) { DesignGalleryView(data: app.data) }
-        .sheet(isPresented: Binding(get: { reportURL != nil }, set: { if !$0 { reportURL = nil } })) {
-            if let url = reportURL {
-                DoctorReportSheet(url: url, links: app.reportLinks, userID: profile.userID)
-                    .presentationBackground { GlowBackground() }
-            }
-        }
-        .alert("Couldn't make the report", isPresented: Binding(get: { reportError != nil }, set: { if !$0 { reportError = nil } })) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(reportError ?? "")
-        }
-        .sheet(isPresented: $showProfile) {
-            OnboardingView(userID: profile.userID, existing: profile) { showProfile = false }
-                .presentationBackground { GlowBackground() }
-        }
-        .sheet(isPresented: Bindable(model).isPainInsightPresented) {
-            PainInsightView(model: model)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-                .presentationBackground { GlowBackground() }
-                .presentationCornerRadius(Theme.Radius.large)
-        }
-        .sheet(isPresented: Bindable(model).isDescribeSheetPresented) {
-            DescribePainSheet(model: model)
-                .presentationDetents([.medium])
-                .presentationBackground(.ultraThinMaterial)
-                .presentationCornerRadius(Theme.Radius.large)
-        }
-        .sheet(isPresented: Bindable(model).isLogSheetPresented, onDismiss: {
-            // Swiping the sheet away cancels, unless it closed to let the user pick more spots.
-            if !model.isPickingSpots { model.cancelLogging() }
-        }) {
-            LogPainSheet(model: model)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
-                .presentationBackground(.ultraThinMaterial)
-                .presentationCornerRadius(Theme.Radius.large)
-        }
     }
 
     // MARK: Header
 
     private var header: some View {
         HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 8) {
-                    Text("Skeleton").font(.system(size: 24, weight: .bold)).tracking(-0.6)
-                    if app.isDemoMode {
-                        Text("DEMO")
-                            .font(.system(size: 9, weight: .bold)).tracking(1)
-                            .foregroundStyle(Theme.Color.secondaryText)
-                            .padding(.horizontal, 7).padding(.vertical, 3)
-                            .background(Capsule().fill(Theme.Color.track))
-                            .accessibilityLabel("Demo mode, not synced")
-                    }
-                }
-                Text(greeting)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.Color.secondaryText)
-            }
+            Text("Body").font(.system(size: 28, weight: .bold)).tracking(-0.7)
             Spacer()
             CircleIconButton(systemImage: "mic.fill", label: "Describe your pain") { model.isDescribeSheetPresented = true }
-            Menu {
-                Section(app.isDemoMode ? "Demo mode: data stays on this device" : "Signed in · synced with Supabase") {
-                    Button("Doctor report", systemImage: "doc.text") { makeReport() }
-                }
-                Button("Edit profile", systemImage: "person.crop.circle") { showProfile = true }
-                if model.healthConnected {
-                    Button("Disconnect \(model.health.sourceName)", systemImage: "heart.slash") {
-                        model.disconnectHealth()
-                        app.setHealthConnected(false, userID: profile.userID)
-                    }
-                } else if model.health.isAvailable {
-                    Button("Connect Apple Health", systemImage: "heart.text.square") {
-                        Task {
-                            if await model.connectHealth() { app.setHealthConnected(true, userID: profile.userID) }
-                        }
-                    }
-                }
-                Button("Design system", systemImage: "square.grid.2x2") { showGallery = true }
-                Button("Reset view", systemImage: "arrow.counterclockwise") { model.resetCamera() }
-                Button("Sign out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
-                    Task { await app.signOut() }
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Theme.Color.text)
-                    .frame(width: 40, height: 40)
-                    .glass(Circle(), tint: 0.55)
-            }
-            .accessibilityLabel("More")
+            CircleIconButton(systemImage: "arrow.counterclockwise", label: "Reset view") { model.resetCamera() }
         }
         .padding(.horizontal, 20)
         .padding(.top, 4)
-    }
-
-    private var greeting: String {
-        let name = profile.displayName.map { ", \($0)" } ?? ""
-        return model.spots.isEmpty ? "Hi\(name). Tap where it hurts." : "Hi\(name)"
     }
 
     // MARK: Stage
@@ -272,7 +165,7 @@ struct BodyScreen: View {
                             if model.episodes.count == 1, let ep = model.episodes.first {
                                 model.open(ep)
                             } else if model.episodes.isEmpty, let latest = model.latestEntry {
-                                model.openPainInsight(latest.id)
+                                model.show(.pain(latest.id))
                                 return
                             }
                         }
@@ -337,7 +230,7 @@ struct BodyScreen: View {
                         } else if let episode = model.selectedEpisode {
                             InsightCard(model: model, episode: episode)
                         } else {
-                            EpisodesCard(model: model)
+                            EpisodesCard(model: model) { model.open($0) }
                             PillSegmentedControl(options: ViewPreset.allCases.map { (value: $0, title: $0.title) },
                                                  selection: Binding(get: { model.preset }, set: { model.select($0) }))
                         }
@@ -415,7 +308,7 @@ struct BodyScreen: View {
                 .font(.system(size: 17, weight: .semibold))
                 .tracking(-0.2)
             ForEach(list) { e in
-                Button { model.openPainInsight(e.id) } label: {
+                Button { model.show(.pain(e.id)) } label: {
                 HStack(alignment: .top, spacing: 10) {
                     Text("\(e.intensity)")
                         .font(.system(size: 13, weight: .bold).monospacedDigit())
@@ -453,14 +346,6 @@ struct BodyScreen: View {
                     .buttonStyle(.secondaryPill)
             }
             .padding(.top, 6)
-        }
-    }
-
-    private func makeReport() {
-        do {
-            reportURL = try model.makeReport(profile: profile)
-        } catch {
-            reportError = error.localizedDescription
         }
     }
 }

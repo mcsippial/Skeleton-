@@ -38,7 +38,7 @@ struct RootView: View {
                     .padding(Theme.Spacing.l)
                 case .loaded(let profile):
                     // Re-created when proportions change, so the body is rebuilt to fit.
-                    BodyScreen(app: model, profile: profile)
+                    MainView(app: model, profile: profile)
                         .id(profile)
                         .transition(.opacity)
                 }

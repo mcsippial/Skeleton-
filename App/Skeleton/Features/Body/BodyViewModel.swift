@@ -300,9 +300,50 @@ final class BodyViewModel {
     private var painInsightCache: [String: PainInsight] = [:]
     private var painInsightTask: Task<Void, Never>?
 
-    var isPainInsightPresented: Bool {
-        get { painInsightEntryID != nil }
-        set { if !newValue { closePainInsight() } }
+    // MARK: Navigation requests (applied by MainView)
+
+    /// A page to push on the current tab, e.g. a pain's insight after saving it.
+    var requestedRoute: Route?
+    /// A tab to switch to, e.g. Body when logging from Home.
+    var requestedTab: AppTab?
+
+    func show(_ route: Route) { requestedRoute = route }
+
+    /// From Home: go to the body and invite a tap.
+    func startLoggingFromHome() {
+        requestedTab = .body
+        showTooltip(title: "Tap where it hurts", subtitle: "Or use the mic to describe it")
+    }
+
+    /// From a pattern page: show it on the body and play the replay.
+    func watch(_ episode: Episode) {
+        requestedTab = .body
+        open(episode)
+        Task {
+            try? await Task.sleep(for: .milliseconds(700))
+            replay(episode)
+        }
+    }
+
+    @ObservationIgnored private var headlineCache: [String: String] = [:]
+
+    /// One-line answer for a pain (rules version; cheap and offline), for Home and History.
+    func headline(for entry: PainEntry) -> String {
+        let key = cacheKey(entry)
+        if let h = painInsightCache[key]?.headline ?? headlineCache[key] { return h }
+        guard let engine = painEngine else { return "" }
+        let h = engine.instant(for: entry, allEntries: entries, metrics: metrics, demographics: demographics).headline
+        headlineCache[key] = h
+        return h
+    }
+
+    func delete(_ id: UUID) async {
+        do {
+            try await pain.delete(id: id)
+            await loadEntries()
+        } catch {
+            loadError = "Couldn't delete. \(error.localizedDescription)"
+        }
     }
 
     private var painEngine: PainInsightEngine? {
@@ -366,8 +407,7 @@ final class BodyViewModel {
     /// From a pain's insight to the pattern it belongs to.
     func openPattern(from insight: PainInsight) {
         guard let ep = insight.linkedEpisode else { return }
-        closePainInsight()
-        open(ep)
+        show(.pattern(ep.id))
     }
 
     /// The most recent entry, for "see what may be behind it" on the home sheet.
@@ -500,6 +540,7 @@ final class BodyViewModel {
         draftRegions = parsed.regionIDs
         draftPoint = nil
         isDescribeSheetPresented = false
+        requestedTab = .body
         if let p = stockBody?.anchor(ofRegion: parsed.regionIDs[0]) { setCamera(.focusing(p, distance: 1.4), animated: true) }
         isLogSheetPresented = true
         return true
@@ -521,7 +562,7 @@ final class BodyViewModel {
         // Every logged pain gets its own insight straight away (it links to its pattern, if any).
         selectedEpisode = nil
         selectedSpot = entry.regionIDs.first
-        openPainInsight(entry.id)
+        show(.pain(entry.id))
     }
 
     /// The entry the sheet would save (falls back to "aching" only for the live red-flag preview).
@@ -686,7 +727,7 @@ final class BodyViewModel {
         return best?.0
     }
 
-    private func showTooltip(title: String, subtitle: String) {
+    func showTooltip(title: String, subtitle: String) {
         tooltip = (title, subtitle)
         tooltipTask?.cancel()
         tooltipTask = Task {

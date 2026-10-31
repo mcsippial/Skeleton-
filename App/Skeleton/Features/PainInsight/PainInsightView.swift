@@ -30,7 +30,7 @@ struct PainInsightView: View {
                     footer(insight)
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 22)
+                .padding(.top, 8)
                 .padding(.bottom, 30)
             }
             .animation(.spring(response: 0.45, dampingFraction: 0.88), value: insight)
@@ -51,16 +51,7 @@ struct PainInsightView: View {
                     .font(.system(size: 14))
                     .foregroundStyle(Theme.Color.secondaryText)
             }
-            Spacer(minLength: 12)
-            Button { model.closePainInsight() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Theme.Color.text)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(Theme.Color.track))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Close")
+            Spacer(minLength: 0)
         }
     }
 
