@@ -62,9 +62,18 @@ public struct StockBody: Sendable {
         var merged = MeshData()
         for m in skinMeshes { merged.append(m) }
         skinMesh = merged
-        skinCentroids = stride(from: 0, to: merged.indices.count - 2, by: 3).map { i in
-            (merged.positions[Int(merged.indices[i])] + merged.positions[Int(merged.indices[i + 1])] + merged.positions[Int(merged.indices[i + 2])]) / 3
+        var centroids: [Vec3] = []
+        centroids.reserveCapacity(merged.indices.count / 3)
+        var ti = 0
+        while ti + 2 < merged.indices.count {
+            let a: Vec3 = merged.positions[Int(merged.indices[ti])]
+            let b: Vec3 = merged.positions[Int(merged.indices[ti + 1])]
+            let c: Vec3 = merged.positions[Int(merged.indices[ti + 2])]
+            let sum: Vec3 = a + b + c
+            centroids.append(sum / 3)
+            ti += 3
         }
+        skinCentroids = centroids
         atlasRegions = Dictionary(uniqueKeysWithValues: atlas.regions.map { ($0.id, $0) })
         let triCount = merged.indices.count / 3
         if let table = skinRegions, table.triangleCount == triCount, table.atlasVersion == atlas.version {
