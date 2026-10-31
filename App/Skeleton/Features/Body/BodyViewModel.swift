@@ -23,7 +23,16 @@ final class BodyViewModel {
     private(set) var draftPoint: SurfacePoint?
     /// True while the user is tapping extra spots for a multi-region entry.
     private(set) var isPickingSpots = false
-    var isLogSheetPresented = false
+    var isLogSheetPresented = false {
+        didSet {
+            // However the log sheet closes (Cancel, swipe, or a presentation that never happened),
+            // its highlighted areas go with it, unless it closed so the user can pick more spots.
+            if oldValue, !isLogSheetPresented, !isPickingSpots {
+                draftRegions = nil
+                draftPoint = nil
+            }
+        }
+    }
     /// Answers in the log sheet. Lives here so they survive closing the sheet to add spots.
     var form = LogForm()
     var isDescribeSheetPresented = false
@@ -480,7 +489,7 @@ final class BodyViewModel {
             guard let p = body.anchor(ofRegion: s.regionID) else { return nil }
             return .init(id: s.regionID, position: p, intensity: s.intensity, pulses: s.isRecent, isPending: false)
         }
-        for r in draftRegions ?? [] {
+        for r in (isLogSheetPresented || isPickingSpots) ? draftRegions ?? [] : [] {
             guard let p = body.anchor(ofRegion: r) else { continue }
             out.removeAll { $0.id == r }
             out.append(.init(id: r, position: p, intensity: 0, pulses: true, isPending: true))
@@ -569,6 +578,9 @@ final class BodyViewModel {
         isDescribeSheetPresented = false
         requestedTab = .body
         if let p = stockBody?.anchor(ofRegion: parsed.regionIDs[0]) { setCamera(.focusing(p, distance: 1.4), animated: true) }
+        // A sheet can't open while another is still closing; opening too early silently failed and
+        // left the parsed areas highlighted with no sheet to finish or cancel.
+        try? await Task.sleep(for: .milliseconds(600))
         isLogSheetPresented = true
         return true
     }

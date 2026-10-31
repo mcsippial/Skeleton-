@@ -249,7 +249,11 @@ struct BodyScreen: View {
                 model.clearSelection()
             }
         }
-        .onDisappear { model.clearSelection() }
+        .onDisappear {
+            model.clearSelection()
+            // Leaving mid-pick abandons that log, so its areas don't stay highlighted.
+            if model.isPickingSpots { model.cancelLogging() }
+        }
         .onChange(of: panelFocus) { _, focus in
             withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
                 panelExpanded = !focus.isEmpty
