@@ -20,24 +20,9 @@ struct BodyScreen: View {
             stage.ignoresSafeArea()
             VStack(spacing: 0) {
                 header
-                if let tip = model.tooltip {
-                    GlassTooltip(title: tip.title, subtitle: tip.subtitle)
-                        .padding(.horizontal, 40)
-                        .padding(.top, 6)
-                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                }
                 HStack(alignment: .center) {
                     LayerRail(visible: model.visibleLayers) { model.toggle($0) }
                     Spacer()
-                    VStack(spacing: 10) {
-                        if model.isZoomedIn {
-                            CircleIconButton(systemImage: "arrow.down.right.and.arrow.up.left", label: "Back to whole body") {
-                                model.zoomOutToBody()
-                            }
-                            .transition(.scale.combined(with: .opacity))
-                        }
-                    }
-                    .animation(.spring(response: 0.35, dampingFraction: 0.8), value: model.isZoomedIn)
                 }
                 .padding(.horizontal, 12)
                 .frame(maxHeight: .infinity)
@@ -235,11 +220,6 @@ struct BodyScreen: View {
                             PillSegmentedControl(options: ViewPreset.allCases.map { (value: $0, title: $0.title) },
                                                  selection: Binding(get: { model.preset }, set: { model.select($0) }))
                         }
-                        if !model.visibleLayers.contains(.skin) && model.selection == nil {
-                            Text("The inside is reference anatomy, not yours.")
-                                .font(.system(size: 11))
-                                .foregroundStyle(Theme.Color.secondaryText)
-                        }
                     }
                     .padding(.bottom, 4)
                     .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { panelContentHeight = $0 }
@@ -272,23 +252,26 @@ struct BodyScreen: View {
     }
 
     private func selectionCard(_ s: BodyTapResult) -> some View {
-        GlassCard {
+        GlassCard(label: s.layer.category) {
             Text(s.structureName)
                 .font(.system(size: 17, weight: .semibold))
                 .tracking(-0.2)
-            Text(s.layer == .skin ? (s.region?.name ?? "Skin") : [s.layer.category, s.region?.name].compactMap { $0 }.joined(separator: " · "))
-                .font(Theme.Font.caption)
-                .foregroundStyle(Theme.Color.secondaryText)
             if !s.info.isEmpty {
                 Text(s.info).font(Theme.Font.callout).foregroundStyle(Color(hex: 0x2A2A2E))
             }
+            SectionLabel("Body region").padding(.top, 8)
+            Text(s.region?.name ?? "Not mapped to a region")
+                .font(.system(size: 14, weight: .semibold))
             HStack(spacing: 8) {
                 if s.region != nil {
                     Button("Log pain here") { model.startLogging() }
                         .buttonStyle(.primaryPill)
                 }
-                Button("Close") { model.clearSelection() }
-                    .buttonStyle(.secondaryPill)
+                // Focus zooms in on it; once zoomed, the same button zooms back out.
+                Button(model.isZoomedIn ? "Zoom out" : "Focus") {
+                    if model.isZoomedIn { model.zoomOutToBody() } else { model.focusSelection() }
+                }
+                .buttonStyle(.secondaryPill)
             }
             .padding(.top, 6)
         }
