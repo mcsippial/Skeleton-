@@ -28,3 +28,5 @@ supabase/functions/node_modules/
 # Licensed anatomy model (see docs/ANATOMY.md)
 App/Skeleton/Anatomy/*
 !App/Skeleton/Anatomy/README.md
+__pycache__/
+*.pyc
