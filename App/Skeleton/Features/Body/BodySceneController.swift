@@ -21,7 +21,6 @@ final class BodySceneController {
     private var cameraAnimation: AnimationPlaybackController?
     /// Structures currently drawn with a non-base material (tapped or glowing).
     private var tinted: Set<String> = []
-    private var flashReset: Task<Void, Never>?
     private let seamEntity = ModelEntity()
 
     private struct AppliedState {
@@ -108,6 +107,8 @@ final class BodySceneController {
         var intensity: Int
         var pulses: Bool
         var isPending: Bool
+        /// The skin area the user tapped (highlighted while it stays selected).
+        var isSelected: Bool = false
     }
 
     func update(_ s: State) {
@@ -130,16 +131,6 @@ final class BodySceneController {
             applied.flashID = s.flashID
             applied.glowIDs = s.glowIDs
             applyHighlights()
-            if let id = s.flashID {
-                // The tap highlight clears itself here, so it never depends on another view update.
-                flashReset?.cancel()
-                flashReset = Task { @MainActor [weak self] in
-                    try? await Task.sleep(for: .seconds(1.6))
-                    guard let self, !Task.isCancelled, self.applied.flashID == id else { return }
-                    self.applied.flashID = nil
-                    self.applyHighlights()
-                }
-            }
         }
 
         updateSpots(s.spots)
@@ -204,7 +195,7 @@ final class BodySceneController {
     private func makeSpot(_ spot: SpotRender) -> Entity {
         let group = Entity()
         group.name = "spot.\(spot.id)"
-        let color = spot.isPending ? UIColor.rgbWhite : Self.painColor(spot.intensity)
+        let color = spot.isSelected ? UIColor(hex: 0x1D8C74) : spot.isPending ? UIColor.rgbWhite : Self.painColor(spot.intensity)
 
         // The whole body area fills with colour (like a muscle map), with a faint glow around it.
         if patchMeshes[spot.id] == nil, let body = stockBody {
@@ -213,7 +204,7 @@ final class BodySceneController {
         }
         if let area = patchMeshes[spot.id]?.area {
             var m = UnlitMaterial(color: color)
-            m.blending = .transparent(opacity: .init(floatLiteral: spot.isPending ? 0.45 : 0.62))
+            m.blending = .transparent(opacity: .init(floatLiteral: spot.isSelected ? 0.4 : spot.isPending ? 0.45 : 0.62))
             group.addChild(ModelEntity(mesh: area, materials: [m]))
         }
 

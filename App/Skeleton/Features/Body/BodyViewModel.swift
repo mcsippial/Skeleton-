@@ -37,7 +37,8 @@ final class BodyViewModel {
     var skinOpacity: Double { visibleLayers.contains(.skin) ? 1 : 0 }
     private(set) var selection: BodyTapResult?
     private(set) var tooltip: (title: String, subtitle: String)?
-    private(set) var flashID: String?
+    /// The selected structure is highlighted for as long as it stays selected.
+    var flashID: String? { selection.flatMap { $0.layer == .skin ? nil : $0.structureID } }
 
     private(set) var camera = OrbitCamera(target: Vec3(0, 0.76, 0), yaw: 0.6, pitch: 0.08, distance: 3.7)
     private(set) var cameraRevision = 0
@@ -50,7 +51,6 @@ final class BodyViewModel {
     /// After a pinch, ignore the rest of that touch's drag so the body doesn't spin.
     private var suppressDrag = false
     private var tooltipTask: Task<Void, Never>?
-    private var flashTask: Task<Void, Never>?
 
     init(data: SkeletonData, pain: any PainRepository, insights: any InsightProvider,
          painInsights: any PainInsightProvider, parser: any TextPainParser, health: any HealthService, healthConnected: Bool, profile: Profile) {
@@ -485,6 +485,11 @@ final class BodyViewModel {
             out.removeAll { $0.id == r }
             out.append(.init(id: r, position: p, intensity: 0, pulses: true, isPending: true))
         }
+        // A tapped skin area stays highlighted while selected (unless it's already a pain area).
+        if let s = selection, s.layer == .skin, let r = s.region?.id, !out.contains(where: { $0.id == r }),
+           let p = body.anchor(ofRegion: r) {
+            out.append(.init(id: r, position: p, intensity: 0, pulses: false, isPending: false, isSelected: true))
+        }
         return out
     }
 
@@ -715,6 +720,8 @@ final class BodyViewModel {
 
         // Heat spots sit on top of the body, so they win.
         if let spot = nearestSpot(along: ray) {
+            // Tapping the selected pain area again deselects it.
+            if selectedSpot == spot { clearSelection(); return }
             selectedSpot = spot
             selectedEpisode = nil
             selection = nil
@@ -727,16 +734,20 @@ final class BodyViewModel {
             clearSelection()
             return
         }
+        // Tapping the selected part again deselects it.
+        if let current = selection, current.structureID == hit.structureID,
+           hit.layer != .skin || current.region?.id == hit.region?.id {
+            clearSelection()
+            return
+        }
         selectedSpot = nil
         selectedEpisode = nil
         selection = hit
         tooltip = nil
-        flash(hit.layer == .skin ? nil : hit.structureID)
     }
 
     func clearSelection() {
         endReplay()
-        flash(nil)
         selection = nil
         selectedSpot = nil
         selectedEpisode = nil
@@ -746,7 +757,7 @@ final class BodyViewModel {
 
     private func nearestSpot(along ray: Ray) -> String? {
         var best: (String, Float)?
-        for s in spotRenders where !s.isPending {
+        for s in spotRenders where !s.isPending && !s.isSelected {
             if let t = ray.intersectSphere(center: s.position, radius: 0.035), t < (best?.1 ?? .infinity) {
                 best = (s.id, t)
             }
@@ -763,15 +774,6 @@ final class BodyViewModel {
         }
     }
 
-    private func flash(_ id: String?) {
-        flashID = id
-        flashTask?.cancel()
-        guard id != nil else { return }
-        flashTask = Task {
-            try? await Task.sleep(for: .seconds(1.6))
-            if !Task.isCancelled { flashID = nil }
-        }
-    }
 }
 
 /// Answers in the log-pain sheet.
