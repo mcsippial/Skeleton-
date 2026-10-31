@@ -127,12 +127,6 @@ final class BodySceneController {
             applied.skinOpacity = s.skinOpacity
         }
 
-        if s.flashID != applied.flashID || s.glowIDs != applied.glowIDs {
-            applied.flashID = s.flashID
-            applied.glowIDs = s.glowIDs
-            applyHighlights()
-        }
-
         updateSpots(s.spots)
         updateArcs(s.arcs)
 
@@ -217,16 +211,18 @@ final class BodySceneController {
         return UIColor(hue: 0.11 - k * 0.11, saturation: 1, brightness: 1, alpha: 1)
     }
 
-    /// Brings every structure's material in line with the applied flash and glow, resetting any
-    /// that were tinted before (so no highlight can be left behind).
-    private func applyHighlights() {
-        var wanted = applied.glowIDs
-        if let f = applied.flashID { wanted.insert(f) }
+    /// The one place body parts get highlighted. Called directly whenever the selection changes
+    /// (not from RealityView's update pass, which doesn't always run): the selected part is
+    /// highlighted, parts on an opened pain pathway glow, and every other part that was tinted
+    /// before goes back to normal.
+    func setHighlights(selected: String?, glowing: Set<String>) {
+        var wanted = glowing
+        if let selected { wanted.insert(selected) }
         for id in tinted.union(wanted) {
             guard let item = structures[id], item.layer != .skin else { continue }
             let material: PhysicallyBasedMaterial
-            if id == applied.flashID { material = BodyMaterials.tapped(for: item.layer) }
-            else if applied.glowIDs.contains(id) { material = BodyMaterials.glowing(for: item.layer) }
+            if id == selected { material = BodyMaterials.tapped(for: item.layer) }
+            else if glowing.contains(id) { material = BodyMaterials.glowing(for: item.layer) }
             else { material = BodyMaterials.base(for: item.layer) }
             item.entity.model?.materials = [material]
         }

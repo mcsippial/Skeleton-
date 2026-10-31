@@ -221,6 +221,14 @@ final class BodyViewModel {
         return []
     }
 
+    /// What should be highlighted on the body right now: the selected part, and the parts along
+    /// an opened pain pathway. Nothing else ever stays highlighted.
+    struct Highlight: Equatable {
+        var selected: String?
+        var glowing: Set<String>
+    }
+    var highlight: Highlight { Highlight(selected: flashID, glowing: glowingStructures) }
+
     /// Structures along the shown links glow.
     private var glowingStructures: Set<String> {
         var ids = Set<String>()

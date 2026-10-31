@@ -15,6 +15,7 @@ struct BodyRealityView: View {
                 await controller.build(body3D)
                 content.add(controller.root)
                 controller.update(model.sceneState)
+                controller.setHighlights(selected: model.highlight.selected, glowing: model.highlight.glowing)
             } update: { _ in
                 // Reading `sceneState` here registers observation, so any change re-runs this.
                 controller.update(model.sceneState)
@@ -37,8 +38,15 @@ struct BodyRealityView: View {
                 SpatialTapGesture()
                     .onEnded { value in
                         model.handleTap(controller.ray(at: value.location, in: geo.size))
+                        controller.setHighlights(selected: model.highlight.selected, glowing: model.highlight.glowing)
                     }
             )
+            // Any other way the selection changes (closing the drawer, leaving the tab, opening a
+            // pattern) updates the highlight too. `onChange` reliably fires; RealityView's update
+            // pass doesn't always.
+            .onChange(of: model.highlight) { _, h in
+                controller.setHighlights(selected: h.selected, glowing: h.glowing)
+            }
             .accessibilityElement()
             .accessibilityLabel("3D body. Drag to rotate, pinch to zoom, tap to identify a structure.")
         }
