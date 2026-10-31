@@ -49,3 +49,11 @@ The app finds the files, stands the model up, turns it to face forward, scales i
 - The files are gitignored because marketplace licenses usually forbid sharing the raw model. Keep the original download somewhere safe.
 - `--budget` sets how much detail to keep (default 400,000 triangles). Lower it if the body feels slow on an older iPhone.
 - For TestFlight/App Store builds the files must be present on the machine that archives the app.
+
+## Free option for prototyping: Z-Anatomy
+
+```bash
+bash tools/anatomy/get_z_anatomy.sh
+```
+
+Downloads [Z-Anatomy](https://github.com/Z-Anatomy/Models-of-human-anatomy) and runs the same preparation. Z-Anatomy is CC BY-SA 4.0 (attribution: Z-Anatomy, by Lluís Vinent / Gauthier Kervyn, based on BodyParts3D). Its share-alike terms make it **prototype/TestFlight only**; swap in a commercially licensed model before the App Store.

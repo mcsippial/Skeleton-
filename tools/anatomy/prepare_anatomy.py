@@ -58,6 +58,52 @@ def import_model(path: pathlib.Path):
         sys.exit(f"Unsupported file type: {ext}")
 
 
+def unhide_everything():
+    """Atlas files (e.g. Z-Anatomy) hide most systems; include and show everything so it can be
+    edited and exported."""
+    def walk(lc):
+        lc.exclude = False
+        lc.hide_viewport = False
+        lc.collection.hide_viewport = False
+        lc.collection.hide_render = False
+        for child in lc.children:
+            walk(child)
+    walk(bpy.context.view_layer.layer_collection)
+    for o in bpy.context.scene.objects:
+        o.hide_viewport = False
+        o.hide_render = False
+        try:
+            o.hide_set(False)
+        except RuntimeError:
+            pass
+
+
+def curves_to_meshes():
+    """Nerves are often modelled as bevelled curves: turn those into real meshes."""
+    dg = bpy.context.evaluated_depsgraph_get()
+    for o in [o for o in bpy.context.scene.objects if o.type == "CURVE"]:
+        if o.data.bevel_depth <= 0 and o.data.bevel_object is None:
+            continue
+        mesh = bpy.data.meshes.new_from_object(o.evaluated_get(dg))
+        if not mesh.polygons:
+            continue
+        name = o.name
+        new = bpy.data.objects.new(name + "_mesh", mesh)
+        new.matrix_world = o.matrix_world.copy()
+        for c in o.users_collection:
+            c.objects.link(new)
+        bpy.data.objects.remove(o, do_unlink=True)
+        new.name = name
+
+
+def make_editable(o):
+    """Shape keys block applying modifiers; drop them (we only need the rest pose)."""
+    if o.data.users > 1:
+        o.data = o.data.copy()
+    if o.data.shape_keys:
+        o.shape_key_clear()
+
+
 def triangles(obj) -> int:
     return sum(len(p.vertices) - 2 for p in obj.data.polygons)
 
@@ -69,6 +115,8 @@ def main():
     import_model(pathlib.Path(a.input).expanduser())
     overrides = json.loads(pathlib.Path(a.overrides).read_text()) if a.overrides else {}
 
+    unhide_everything()
+    curves_to_meshes()
     meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
     # Centre on X so "left" (+X) can also be inferred from position for unnamed sides.
     xs = [(o.matrix_world @ Vector(c)).x for o in meshes for c in o.bound_box]
@@ -85,15 +133,19 @@ def main():
             skipped.append(o.name); continue
         kept.append((o, info))
 
+    kept_names = {k[0].name for k in kept}
     for o in meshes:
-        if o not in [k[0] for k in kept]:
+        if o.name not in kept_names:
             bpy.data.objects.remove(o, do_unlink=True)
 
     # Reduce detail to the budget, proportionally per object.
     before = sum(triangles(o) for o, _ in kept)
     ratio = min(1.0, a.budget / max(before, 1))
+    if bpy.context.object and bpy.context.object.mode != "OBJECT":
+        bpy.ops.object.mode_set(mode="OBJECT")
     if ratio < 1:
         for o, _ in kept:
+            make_editable(o)
             m = o.modifiers.new("skeleton_decimate", "DECIMATE")
             m.ratio = max(ratio, 0.02)
             bpy.context.view_layer.objects.active = o
@@ -111,7 +163,8 @@ def main():
 
     usdz = out / "anatomy.usdz"
     try:
-        bpy.ops.wm.usd_export(filepath=str(usdz), export_materials=False, export_animation=False)
+        bpy.ops.wm.usd_export(filepath=str(usdz), export_materials=False, export_animation=False,
+                              visible_objects_only=False, selected_objects_only=False)
     except TypeError:
         bpy.ops.wm.usd_export(filepath=str(usdz))
 
