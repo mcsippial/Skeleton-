@@ -55,10 +55,14 @@ enum AnatomyAssetLoader {
         for instance in contents.instances {
             guard let model = contents.models[instance.model] else { continue }
             let t = transform * instance.transform
-            let normalMatrix = simd_transpose(simd_inverse(simd_float3x3(
+            let linear = simd_float3x3(
                 SIMD3(t.columns.0.x, t.columns.0.y, t.columns.0.z),
                 SIMD3(t.columns.1.x, t.columns.1.y, t.columns.1.z),
-                SIMD3(t.columns.2.x, t.columns.2.y, t.columns.2.z))))
+                SIMD3(t.columns.2.x, t.columns.2.y, t.columns.2.z))
+            let normalMatrix = simd_transpose(simd_inverse(linear))
+            // Mirrored parts (one side modelled, the other a negative-scale copy) come in
+            // inside out unless their triangle winding is flipped back.
+            let mirrored = simd_determinant(linear) < 0
             for part in model.parts {
                 let positions = part.positions.elements
                 guard let indices = part.triangleIndices?.elements, !positions.isEmpty else { continue }
@@ -69,7 +73,14 @@ enum AnatomyAssetLoader {
                     return Vec3(v.x, v.y, v.z)
                 }
                 piece.normals = normals.map { (normalMatrix * $0).unit }
-                piece.indices = indices
+                if mirrored {
+                    var flipped = indices
+                    var k = 0
+                    while k + 2 < flipped.count { flipped.swapAt(k + 1, k + 2); k += 3 }
+                    piece.indices = flipped
+                } else {
+                    piece.indices = indices
+                }
                 out.append(piece)
             }
         }
