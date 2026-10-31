@@ -27,9 +27,9 @@ public struct StockBody: Sendable {
     private let skinCentroids: [Vec3]
     private let atlasRegions: [String: BodyRegion]
 
-    public init(atlas: BodyAtlas, morph: BodyMorph = .identity, skin: MeshData? = nil) {
+    public init(atlas: BodyAtlas, morph: BodyMorph = .identity, skin: MeshData? = nil, inner: [AnatomyStructure]? = nil) {
         self.morph = morph
-        let morphed = StockAnatomy.build(skin: skin).map {
+        let morphed = StockAnatomy.build(skin: skin, inner: inner).map {
             AnatomyStructure(id: $0.id, name: $0.name, layer: $0.layer, info: $0.info, mesh: morph.apply(to: $0.mesh))
         }
         structures = morphed

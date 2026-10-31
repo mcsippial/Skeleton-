@@ -50,6 +50,11 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [x] Insight screen opens after every logged pain; reachable from each spot's history and the home sheet
 - [ ] Clinical review of the region guides and red-flag wording
 
+## Realistic anatomy (owner's choice, Oct 2026)
+- [x] Import pipeline: `tools/anatomy/prepare_anatomy.py` (Blender) + name→structure mapper (tested) + coverage report; app loads `Anatomy/anatomy.usdz` with fallback to prototype anatomy; auto orient/scale (`AnatomyFit`, tested)
+- [ ] Choose and buy an anatomy model (nerves + in-app license)
+- [ ] Run the import, check the coverage report, tune overrides and triangle budget
+
 ## Phase 3 — Health integrations
 - [x] Apple Health directly (HealthKit, read-only): sleep, HRV, resting HR, steps, workouts, weight; demo data in demo mode
 - [x] Metrics on the timeline; fed to the cause engine (`HealthSummary`: before-onset vs usual), shown on the insight card and report

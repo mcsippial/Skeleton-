@@ -12,14 +12,33 @@ import Foundation
 public enum StockAnatomy {
     /// - Parameter skin: the smooth sculpted skin (`data/stock-body-skin.bin`). Without it the
     ///   body falls back to the preview's capsule skin (used by tests and as a safety net).
-    public static func build(skin: MeshData? = nil) -> [AnatomyStructure] {
+    /// - Parameter inner: licensed anatomy (muscles, tendons, nerves, bones) from `anatomy.usdz`,
+    ///   already fitted with `AnatomyFit`. Without it the stylised prototype anatomy is used.
+    public static func build(skin: MeshData? = nil, inner: [AnatomyStructure]? = nil) -> [AnatomyStructure] {
         var b = Builder()
         if let skin {
             b.out.append(AnatomyStructure(id: "skin", name: "Skin", layer: .skin, info: "", mesh: skin))
         } else {
             b.skin()
         }
+        if let inner, !inner.isEmpty {
+            if skin == nil { for s: Float in [1, -1] { b.capsuleSkinPieces(s, s == 1 ? "Left" : "Right") } }
+            // Keep the plain-English descriptions for structures the prototype also had.
+            let info = Dictionary(prototypeInner().map { ($0.id, $0.info) }, uniquingKeysWith: { a, _ in a })
+            b.out += inner.filter { $0.layer != .skin }.map {
+                AnatomyStructure(id: $0.id, name: $0.name, layer: $0.layer, info: $0.info.isEmpty ? info[$0.id] ?? "" : $0.info, mesh: $0.mesh)
+            }
+            return b.out
+        }
         for s: Float in [1, -1] { b.sided(s, capsuleSkin: skin == nil) }
+        b.centre()
+        return b.out
+    }
+
+    /// The prototype's inner structures (for their descriptions).
+    static func prototypeInner() -> [AnatomyStructure] {
+        var b = Builder()
+        for s: Float in [1, -1] { b.inner(s, s == 1 ? "l" : "r", s == 1 ? "Left" : "Right") }
         b.centre()
         return b.out
     }

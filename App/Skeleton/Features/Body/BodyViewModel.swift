@@ -426,7 +426,9 @@ final class BodyViewModel {
     func load(morph: BodyMorph = .identity) async {
         guard stockBody == nil else { return }
         let atlas = data.atlas, skin = data.skin
-        let body = await Task.detached(priority: .userInitiated) { StockBody(atlas: atlas, morph: morph, skin: skin) }.value
+        // Licensed anatomy if it's in the build; otherwise the prototype anatomy.
+        let inner = await AnatomyAssetLoader.load()
+        let body = await Task.detached(priority: .userInitiated) { StockBody(atlas: atlas, morph: morph, skin: skin, inner: inner) }.value
         stockBody = body
         for view in BodyProjection.View.allCases { silhouettes[view] = BodySilhouette.render(body, view: view) }
         setCamera(OrbitCamera(target: Vec3(0, 0.76 * morph.heightScale, 0), yaw: 0.6, pitch: 0.08,

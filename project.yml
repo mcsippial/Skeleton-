@@ -32,10 +32,17 @@ targets:
       Release: App/Config/Skeleton.xcconfig
     sources:
       - path: App/Skeleton
+        excludes:
+          - Anatomy/**
       # Versioned atlas / pathway / red-flag JSON, bundled as a folder named "data".
       - path: data
         type: folder
         buildPhase: resources
+      # Licensed anatomy (gitignored output of tools/anatomy/prepare_anatomy.py), bundled as "Anatomy".
+      - path: App/Skeleton/Anatomy
+        type: folder
+        buildPhase: resources
+        optional: true
     entitlements:
       path: App/Skeleton/Skeleton.entitlements
       properties:

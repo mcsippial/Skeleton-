@@ -24,3 +24,7 @@ supabase/.temp
 .DS_Store
 App/Skeleton/Info.plist
 supabase/functions/node_modules/
+
+# Licensed anatomy model (see docs/ANATOMY.md)
+App/Skeleton/Anatomy/*
+!App/Skeleton/Anatomy/README.md
