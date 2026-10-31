@@ -19,7 +19,7 @@ Options:
     --overrides FILE   JSON {"Source object name": {"id": "...", "layer": "...", "name": "..."} | "skip"}
     --out DIR          output folder (default App/Skeleton/Anatomy)
 """
-import argparse, json, pathlib, sys
+import argparse, json, pathlib, re, sys
 
 import bpy  # noqa: provided by Blender
 from mathutils import Vector
@@ -147,6 +147,10 @@ def main():
     for o in meshes:
         ov = overrides.get(o.name)
         if ov == "skip":
+            skipped.append(o.name); continue
+        # Atlas helpers, not anatomy: label/leader-line objects ("Ribs.j", "Sternum.t") and
+        # meshes with (almost) no faces.
+        if not ov and (re.search(r"\.[a-km-qs-z]$", o.name, re.I) or len(o.data.polygons) < 4):
             skipped.append(o.name); continue
         cx = sum((o.matrix_world @ Vector(c)).x for c in o.bound_box) / 8 - mid_x
         info = ov or classify(o.name, cx)
