@@ -718,26 +718,25 @@ final class BodyViewModel {
             selectedSpot = spot
             selectedEpisode = nil
             selection = nil
-            let count = entries(inRegion: spot).count
-            showTooltip(title: regionName(spot), subtitle: "\(count) \(count == 1 ? "entry" : "entries")")
+            tooltip = nil
             return
         }
 
         guard let hit = body.tap(ray, visibleLayers: visibleLayers, skinOpacity: Float(skinOpacity)) else {
-            tooltip = nil
+            // Tapping empty space clears whatever was selected.
+            clearSelection()
             return
         }
         selectedSpot = nil
         selectedEpisode = nil
         selection = hit
-        let region = hit.region?.name ?? "Outside the mapped body"
-        showTooltip(title: hit.structureName,
-                    subtitle: hit.layer == .skin ? region : "\(hit.layer.category) · \(region)")
+        tooltip = nil
         flash(hit.layer == .skin ? nil : hit.structureID)
     }
 
     func clearSelection() {
         endReplay()
+        flash(nil)
         selection = nil
         selectedSpot = nil
         selectedEpisode = nil

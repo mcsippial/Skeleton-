@@ -137,6 +137,7 @@ struct BodyScreen: View {
             // The whole top of the sheet is the handle: tap to toggle, drag up/down to open/close.
             VStack(spacing: 10) {
                 Capsule().fill(Theme.Color.secondaryText.opacity(0.3)).frame(width: 36, height: 5)
+                if !(panelExpanded && (model.selection != nil || model.selectedSpot != nil)) {
                 HStack(spacing: 8) {
                     Text(panelSummary.title)
                         .font(.system(size: 15, weight: .semibold))
@@ -150,6 +151,7 @@ struct BodyScreen: View {
                             .padding(.horizontal, 12).padding(.vertical, 7)
                             .background(Capsule().fill(Theme.Color.text))
                     }
+                }
                 }
             }
             .padding(.top, 2)
@@ -233,9 +235,11 @@ struct BodyScreen: View {
                             PillSegmentedControl(options: ViewPreset.allCases.map { (value: $0, title: $0.title) },
                                                  selection: Binding(get: { model.preset }, set: { model.select($0) }))
                         }
-                        Text("Inner layers are reference anatomy, not yours. Not medical advice.")
-                            .font(.system(size: 11))
-                            .foregroundStyle(Theme.Color.secondaryText)
+                        if !model.visibleLayers.contains(.skin) && model.selection == nil {
+                            Text("The inside is reference anatomy, not yours.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Theme.Color.secondaryText)
+                        }
                     }
                     .padding(.bottom, 4)
                     .onGeometryChange(for: CGFloat.self, of: { $0.size.height }) { panelContentHeight = $0 }
@@ -268,32 +272,22 @@ struct BodyScreen: View {
     }
 
     private func selectionCard(_ s: BodyTapResult) -> some View {
-        GlassCard(label: s.layer.category) {
+        GlassCard {
             Text(s.structureName)
                 .font(.system(size: 17, weight: .semibold))
                 .tracking(-0.2)
+            Text(s.layer == .skin ? (s.region?.name ?? "Skin") : [s.layer.category, s.region?.name].compactMap { $0 }.joined(separator: " · "))
+                .font(Theme.Font.caption)
+                .foregroundStyle(Theme.Color.secondaryText)
             if !s.info.isEmpty {
                 Text(s.info).font(Theme.Font.callout).foregroundStyle(Color(hex: 0x2A2A2E))
-            }
-            SectionLabel("Body region").padding(.top, 8)
-            if let region = s.region {
-                HStack(spacing: 6) {
-                    Text(region.name).font(.system(size: 14, weight: .semibold))
-                    Text(region.id)
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundStyle(Theme.Color.secondaryText)
-                }
-            } else {
-                Text("Not mapped to a region").font(Theme.Font.callout).foregroundStyle(Theme.Color.secondaryText)
             }
             HStack(spacing: 8) {
                 if s.region != nil {
                     Button("Log pain here") { model.startLogging() }
                         .buttonStyle(.primaryPill)
                 }
-                Button("Focus") { model.focusSelection() }
-                    .buttonStyle(.secondaryPill)
-                Button("Clear") { model.clearSelection() }
+                Button("Close") { model.clearSelection() }
                     .buttonStyle(.secondaryPill)
             }
             .padding(.top, 6)

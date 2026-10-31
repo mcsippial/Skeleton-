@@ -113,6 +113,70 @@ def pick_skin(meshes):
     return [o for o in preferred if height(o) >= 0.6 * tallest]
 
 
+def wrap_skin(objs):
+    """A skin shrink-wrapped over the anatomy: merge the parts, voxel-remesh them into one
+    closed surface, keep the outer shell, smooth it and push it out a few millimetres."""
+    import bmesh
+    if not objs:
+        return None
+    bm = bmesh.new()
+    dg = bpy.context.evaluated_depsgraph_get()
+    for o in objs:
+        # Evaluated, so mirror/array modifiers (one side modelled, the other generated) count.
+        me = bpy.data.meshes.new_from_object(o.evaluated_get(dg))
+        me.transform(o.matrix_world)
+        bm.from_mesh(me)
+        bpy.data.meshes.remove(me)
+    mesh = bpy.data.meshes.new("SkinWrap")
+    bm.to_mesh(mesh)
+    bm.free()
+    skin = bpy.data.objects.new("Skin", mesh)
+    bpy.context.scene.collection.objects.link(skin)
+
+    zs = [v.co for v in mesh.vertices]
+    height = max(max(c[i] for c in zs) - min(c[i] for c in zs) for i in range(3))
+    bpy.context.view_layer.objects.active = skin
+    rm = skin.modifiers.new("wrap_remesh", "REMESH")
+    rm.mode = "VOXEL"
+    rm.voxel_size = height / 200          # ~9 mm on a 1.75 m body: closes gaps between muscles
+    bpy.ops.object.modifier_apply(modifier=rm.name)
+
+    # Keep the largest connected piece (the outer shell), dropping inner cavity surfaces.
+    bm = bmesh.new()
+    bm.from_mesh(skin.data)
+    bm.verts.ensure_lookup_table()
+    seen, pieces = set(), []
+    for v in bm.verts:
+        if v.index in seen:
+            continue
+        stack, piece = [v], []
+        seen.add(v.index)
+        while stack:
+            cur = stack.pop()
+            piece.append(cur)
+            for e in cur.link_edges:
+                w = e.other_vert(cur)
+                if w.index not in seen:
+                    seen.add(w.index)
+                    stack.append(w)
+        pieces.append(piece)
+    pieces.sort(key=len, reverse=True)
+    for piece in pieces[1:]:
+        bmesh.ops.delete(bm, geom=piece, context="VERTS")
+    bm.to_mesh(skin.data)
+    bm.free()
+
+    sm = skin.modifiers.new("wrap_smooth", "SMOOTH")
+    sm.factor, sm.iterations = 0.6, 8
+    bpy.ops.object.modifier_apply(modifier=sm.name)
+    dp = skin.modifiers.new("wrap_offset", "DISPLACE")
+    dp.strength, dp.mid_level = height * 0.0025, 0.0   # ~4 mm over the muscles
+    bpy.ops.object.modifier_apply(modifier=dp.name)
+    for p in skin.data.polygons:
+        p.use_smooth = True
+    return skin
+
+
 def is_structure_name(name):
     """Z-Anatomy suffixes: .l/.r are the structures; other dotted suffixes are helpers."""
     m = re.search(r"\.([A-Za-z0-9]+)$", name)
@@ -207,6 +271,12 @@ def main():
             bpy.ops.object.modifier_apply(modifier=m.name)
     after = sum(triangles(o) for o, _ in kept)
 
+    # No skin in the file (Z-Anatomy has none): wrap one tightly around the muscles and bones.
+    if not skin:
+        wrapped = wrap_skin([o for o, info in kept if info["layer"] in ("muscles", "bones", "tendons")])
+        if wrapped:
+            skin = [wrapped]
+
     # Skin has its own budget: smooth enough to look good, light enough to tap-test.
     skin_before = sum(triangles(o) for o in skin)
     skin_ratio = min(1.0, SKIN_BUDGET / max(skin_before, 1))
@@ -218,6 +288,17 @@ def main():
             bpy.context.view_layer.objects.active = o
             bpy.ops.object.modifier_apply(modifier=m.name)
     kept += [(o, {"id": "skin", "layer": "skin", "name": "Skin"}) for o in skin]
+
+    # Export only what we kept, flat: atlas labels, leader lines and empties are often parented
+    # to structures and would otherwise ride along inside them.
+    keep = {o.name for o, _ in kept}
+    for o, _ in kept:
+        world = o.matrix_world.copy()
+        o.parent = None
+        o.matrix_world = world
+    for o in list(bpy.context.scene.objects):
+        if o.name not in keep:
+            bpy.data.objects.remove(o, do_unlink=True)
 
     # Stable prim names; the manifest carries the meaning.
     manifest = []
@@ -251,7 +332,7 @@ def main():
         f"Triangles: {before:,} → {after:,} (budget {a.budget:,}).",
         f"Pathway structures found: {len(need) - len(missing)}/{len(need)}.",
         (f"Skin: {', '.join(o.name for o in skin)} ({skin_before:,} → {sum(triangles(o) for o in skin):,} triangles)."
-         if skin else "Skin: none found; the app keeps its own skin."),
+         if skin else "Skin: none; the app keeps its own skin."),
     ]
     if missing:
         lines.append("Missing (pathways will still work; these structures just won't glow): " + ", ".join(missing))

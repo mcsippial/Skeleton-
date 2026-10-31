@@ -56,13 +56,13 @@ enum AnatomyAssetLoader {
         for child in e.children { visit(child, body) }
     }
 
-    /// The manifest entry for an entity: its own prim name or the nearest ancestor's.
+    /// The manifest entry for an entity: its own prim ("SK_0001"), or the mesh directly under it
+    /// ("SK_0001_mesh"). Anything else nested under a structure (atlas text labels and leader
+    /// lines parented to it) is left out rather than merged in.
     private static func owner(of entity: Entity, in byPrim: [String: AnatomyManifest.Entry]) -> AnatomyManifest.Entry? {
-        var e: Entity? = entity
-        while let current = e {
-            if let hit = byPrim[current.name] ?? byPrim[current.name.replacingOccurrences(of: "_mesh", with: "")] { return hit }
-            e = current.parent
-        }
+        let name = entity.name
+        if let hit = byPrim[name] ?? byPrim[name.replacingOccurrences(of: "_mesh", with: "")] { return hit }
+        if let parent = entity.parent, let hit = byPrim[parent.name], name.isEmpty || name.hasPrefix(parent.name) { return hit }
         return nil
     }
 
