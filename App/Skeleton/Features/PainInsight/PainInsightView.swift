@@ -81,7 +81,7 @@ struct PainInsightView: View {
             if model.painInsightRefining {
                 HStack(spacing: 8) {
                     ProgressView().controlSize(.small)
-                    Text("Personalising this for you…").font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
+                    Text("Personalising…").font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
                 }
                 .padding(.top, 4)
                 .transition(.opacity)
@@ -140,8 +140,6 @@ struct PainInsightView: View {
 
     private func questions(_ i: PainInsight) -> some View {
         GlassCard(label: "Help narrow it down") {
-            Text("Quick answers sharpen the possible causes.")
-                .font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
             ForEach(i.questions.prefix(3)) { q in
                 VStack(alignment: .leading, spacing: 8) {
                     Text(q.question).font(.system(size: 14.5, weight: .medium)).fixedSize(horizontal: false, vertical: true)
@@ -169,10 +167,6 @@ struct PainInsightView: View {
                 }
                 .padding(.top, 8)
             }
-            if !i.answered.isEmpty {
-                Text("You've answered \(i.answered.count) \(i.answered.count == 1 ? "question" : "questions"); the causes above include your answers.")
-                    .font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText).padding(.top, 6)
-            }
         }
     }
 
@@ -187,13 +181,13 @@ struct PainInsightView: View {
     }
 
     private func watch(_ i: PainInsight) -> some View {
-        GlassCard(label: "Keep an eye on") {
+        GlassCard(label: "Watch for") {
             ForEach(i.watchFor, id: \.self) { row($0, icon: "eye", tint: Theme.Color.text) }
             if i.watchFor.isEmpty, let s = i.spread.first {
                 row("Pain spreading to your \(s.toRegionNames.prefix(2).map { $0.lowercased() }.joined(separator: " or "))", icon: "eye", tint: Theme.Color.text)
             }
             if !i.warningSigns.isEmpty {
-                SectionLabel("Get checked quickly if you notice").padding(.top, 10)
+                SectionLabel("Get checked quickly if").padding(.top, 10)
                 ForEach(i.warningSigns.prefix(5), id: \.self) { sign in
                     row(sign.trimmingCharacters(in: CharacterSet(charactersIn: "?")), icon: "exclamationmark.triangle.fill", tint: Theme.Color.redFlag)
                 }
@@ -228,10 +222,9 @@ struct PainInsightView: View {
 
     private func linked(_ ep: Episode, _ i: PainInsight) -> some View {
         GlassCard(label: "Connected pain") {
-            Text("This pain may be linked to others you've logged: \(ep.title.lowercased()).")
-                .font(.system(size: 14.5)).fixedSize(horizontal: false, vertical: true)
+            Text(ep.title).font(.system(size: 16, weight: .semibold))
             Button { model.openPattern(from: i) } label: {
-                Label("See the pattern and watch it move", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
+                Label("See the pattern", systemImage: "point.topleft.down.to.point.bottomright.curvepath")
             }
             .buttonStyle(.primaryPill)
             .padding(.top, 6)
@@ -261,10 +254,7 @@ struct PainInsightView: View {
     }
 
     private func footer(_ i: PainInsight) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(i.isRulesOnly ? "From Skeleton's body-area guides." : "Written with AI and checked by Skeleton's safety rules.")
-            Text(Insight.disclaimer)
-        }
+        Text((i.isRulesOnly ? "From Skeleton's guides. " : "AI-written, safety-checked. ") + Insight.disclaimer)
         .font(.system(size: 11))
         .foregroundStyle(Theme.Color.secondaryText)
         .padding(.top, 4)

@@ -108,7 +108,7 @@ struct OnboardingView: View {
                 PillSegmentedControl(options: [(value: BiologicalSex.female, title: "Female"), (value: .male, title: "Male"),
                                                (value: .unspecified, title: "Prefer not to say")],
                                      selection: $profile.sex)
-                Text("Used to fit the body's proportions and to rule out causes that don't apply to you.")
+                Text("Used to fit your body and tailor insights.")
                     .font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
             }
             VStack(alignment: .leading, spacing: 8) {
@@ -126,7 +126,7 @@ struct OnboardingView: View {
     private var bodyStep: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.l) {
             Text("Your build").titleStyle()
-            Text("We fit the 3D body to your height and build. You can scan yourself later.")
+            Text("Used to fit your 3D body.")
                 .font(Theme.Font.body).foregroundStyle(Theme.Color.secondaryText)
             PillSegmentedControl(options: [(value: false, title: "cm · kg"), (value: true, title: "ft · lb")], selection: $useImperial)
             measurement("Height", value: $profile.heightCm, range: 120...220, display: heightText)
@@ -147,7 +147,7 @@ struct OnboardingView: View {
     private var history: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.l) {
             Text("Anything relevant?").titleStyle()
-            Text("Optional. Only add what you're comfortable sharing; it helps connect the dots.")
+            Text("Optional.")
                 .font(Theme.Font.body).foregroundStyle(Theme.Color.secondaryText)
             FlowLayout(spacing: 7) {
                 ForEach(Self.historyOptions, id: \.self) { item in
@@ -181,13 +181,13 @@ struct OnboardingView: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.l) {
             Text("Your body is ready").titleStyle()
             GlassCard(label: "Body") {
-                Text("A stock body fitted to \(heightText) and \(weightText). The layers inside are reference anatomy, not your own internal structures.")
+                Text("Fitted to \(heightText) and \(weightText). Inner layers are reference anatomy.")
                     .font(Theme.Font.callout)
-                Text("Scanning yourself into a realistic model is coming soon.")
+                Text("Body scanning is coming soon.")
                     .font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
             }
             GlassCard(label: "Health apps (optional)") {
-                Text("Connect Apple Health so sleep, recovery, activity and weight show next to your pain and help explain flares. Oura, WHOOP, Garmin and Fitbit are coming soon.")
+                Text("Sleep, recovery and activity help explain flares.")
                     .font(Theme.Font.callout)
                 if app.isDemoMode {
                     Text("Demo health data is connected.").font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)

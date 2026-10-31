@@ -164,9 +164,7 @@ struct BodyScreen: View {
 
     private var greeting: String {
         let name = profile.displayName.map { ", \($0)" } ?? ""
-        let spots = model.spots.count
-        if spots == 0 { return "Hi\(name). Tap your body to log pain." }
-        return "Hi\(name). \(spots) \(spots == 1 ? "area" : "areas") with pain in the last two weeks."
+        return model.spots.isEmpty ? "Hi\(name). Tap where it hurts." : "Hi\(name)"
     }
 
     // MARK: Stage
@@ -315,7 +313,7 @@ struct BodyScreen: View {
                             PillSegmentedControl(options: ViewPreset.allCases.map { (value: $0, title: $0.title) },
                                                  selection: Binding(get: { model.preset }, set: { model.select($0) }))
                         }
-                        Text("Stock body fitted to your height and build. The inner layers are reference anatomy, not your own internal structures. Not medical advice.")
+                        Text("Inner layers are reference anatomy, not yours. Not medical advice.")
                             .font(.system(size: 11))
                             .foregroundStyle(Theme.Color.secondaryText)
                     }

@@ -336,7 +336,7 @@ final class BodyViewModel {
                 painInsightCache[key] = result
             } catch {
                 guard !Task.isCancelled, painInsightEntryID == entryID else { return }
-                painInsightNote = "Showing Skeleton's guide for this area. The personalised explanation isn't available right now."
+                painInsightNote = "Personalised version unavailable right now."
             }
         }
     }

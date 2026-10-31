@@ -82,3 +82,19 @@ test("handler saves, reuses, and limits pain insights", async () => {
   const answered = { ...req, pain: { ...req.pain, answers: [...req.pain.answers, { question: "Worse sitting?", answer: "yes" }] } };
   assert.equal((await (await handle(post(answered))).json()).cached, false);
 });
+
+test("long AI text is cut to the sentence limits", async () => {
+  const { sentences } = await import("../_shared/pain-insight.ts");
+  assert.equal(sentences("One. Two. Three.", 2), "One. Two.");
+  assert.equal(sentences("No full stop here", 1), "No full stop here");
+  const out = sanitizePainInsight({
+    headline: "Most likely a strain. It usually settles.", summary: "A. B. C. D.",
+    factors: [{ title: "Strain", explanation: "First sentence. Second sentence.", confidence: 0.7, candidate_id: "lower_back.strain" }],
+    what_helps: ["Walk daily. Every hour."], avoid: [], see_someone: "See a physio. Or a GP.", watch_for: [], doctor_questions: [],
+  }, req);
+  assert.equal(out.headline, "Most likely a strain.");
+  assert.equal(out.summary, "A. B.");
+  assert.equal(out.factors[0].explanation, "First sentence.");
+  assert.deepEqual(out.what_helps, ["Walk daily."]);
+  assert.equal(out.see_someone, "See a physio.");
+});

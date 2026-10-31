@@ -9,16 +9,12 @@ struct EpisodesCard: View {
         let episodes = model.episodes
         if !episodes.isEmpty {
             GlassCard(label: "Pain patterns") {
-                Text("Pains that showed up close together in areas that are known to affect each other.")
-                    .font(Theme.Font.caption)
-                    .foregroundStyle(Theme.Color.secondaryText)
-                    .padding(.bottom, 2)
                 ForEach(episodes) { ep in
                     Button { model.open(ep) } label: {
                         HStack(spacing: 10) {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(ep.title).font(.system(size: 15, weight: .semibold))
-                                Text("\(ep.entryIDs.count) related pains · \(dateRange(ep))")
+                                Text("\(ep.entryIDs.count) pains · \(dateRange(ep))")
                                     .font(Theme.Font.caption)
                                     .foregroundStyle(Theme.Color.secondaryText)
                             }
@@ -55,11 +51,7 @@ struct InsightCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.m) {
             GlassCard(label: "Watch it move") {
-                Text("Play the days of this pattern to see where the pain started and how it spread.")
-                    .font(Theme.Font.caption)
-                    .foregroundStyle(Theme.Color.secondaryText)
                 ReplayScrubber(model: model, episode: episode)
-                    .padding(.top, 4)
                 if !model.metricsOnDisplayDate.isEmpty {
                     MetricStrip(values: model.metricsOnDisplayDate)
                 }
@@ -89,7 +81,7 @@ struct InsightCard: View {
         GlassCard(label: "Why these may be connected", rainbow: true) {
             Text(i.title).font(.system(size: 17, weight: .semibold)).tracking(-0.2)
             if i.modelVersion == "rules-only" {
-                Text("AI explanation unavailable right now. This is from Skeleton's pathway library only.")
+                Text("From Skeleton's guides (AI unavailable).")
                     .font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
             }
             Text(i.summary).font(Theme.Font.callout).foregroundStyle(Color(hex: 0x2A2A2E))

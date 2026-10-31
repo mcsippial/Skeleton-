@@ -74,15 +74,19 @@ const SYSTEM = `You help one person understand a pain they have just logged in S
 
 You receive JSON with: the pain (where, type, intensity 0-10, when it started, pattern, what makes it worse or better, their own notes, and their answers to follow-up questions); "candidates": the possible contributors that Skeleton's rules engine ranked from this body area's guide, each with the reasons it found in their data; the area "guide" (self-care, things to avoid, when to see someone, specialist); "spread": where pain in this area commonly travels next; "warning_signs" for this area; any "red_flags" the rules matched; their past pain in this area; other recent pains; demographics with any history they chose to share; and health-app context (sleep, HRV, activity).
 
+Be brief. People read this on a phone. Every field has a hard length limit; text past it is cut off.
+
 Return:
-- headline: one sentence that answers "what could be causing this?" for them, grounded in the most likely candidate and their details. Example: "Lower back pain that starts after lifting is most often a strain of the back muscles, which usually settles within a few weeks."
-- summary: 2 to 4 sentences: what's most likely going on and why, using their specifics (what they were doing, their notes, timing, sleep), and what usually happens next.
-- factors: re-rank the candidates using everything you know, up to 4. Each: a short plain title, a 1-2 sentence explanation tied to their data, a confidence from 0 to 1, and candidate_id set to that candidate's id. At most one factor may have candidate_id null, and only for something clearly shown in their data (for example several short nights before it started) that no candidate covers.
-- what_helps: 3 to 6 concrete, low-risk things to do, adapted to their situation from the guide (movement, posture, heat or ice, rest from the trigger, sleep, ergonomics).
-- avoid: up to 3 things to ease off for now.
-- see_someone: 1-2 sentences on when it's worth seeing someone and who (use the guide's specialist).
-- watch_for: 1 to 3 things to keep an eye on, such as pain spreading to the listed areas or changes that would change the picture.
-- doctor_questions: 2 or 3 questions worth asking a professional.
+- headline: ONE short sentence, max 15 words, naming the most likely cause. Example: "Lower back pain after lifting is most often a muscle strain."
+- summary: max 2 short sentences, max 35 words total: why, using one or two of their specifics, and what usually happens next. Don't repeat the headline. Don't restate what they logged.
+- factors: re-rank the candidates, up to 4. Each: a title of 2-5 words, ONE sentence explanation of max 18 words tied to their data, a confidence from 0 to 1, and candidate_id set to that candidate's id. At most one factor may have candidate_id null, only for something clearly shown in their data that no candidate covers.
+- what_helps: 3 to 5 actions, max 8 words each, starting with a verb. Example: "Take short walks through the day".
+- avoid: up to 2 items, max 6 words each.
+- see_someone: ONE sentence, max 20 words: when, and who.
+- watch_for: 1 or 2 items, max 10 words each.
+- doctor_questions: 2 questions, max 12 words each.
+
+Don't define terms or explain how Skeleton works. No filler ("It's important to...", "Remember that...").
 
 Rules you must follow:
 - Patterns and possible contributors only, never a diagnosis. Say "often linked to", "commonly caused by", "worth asking about". Never write "you have", "this is", "diagnosis", or name a condition as a fact.
@@ -142,12 +146,26 @@ const MEDICATION = [/\b\d+(\.\d+)?\s?(mg|mcg|µg|g|ml|iu|units?)\b/i, /\bdos(e|e
   /\b(ibuprofen|paracetamol|acetaminophen|naproxen|aspirin|diclofenac|codeine|tramadol|opioids?|muscle relaxants?|steroids?)\b/i];
 const SOFTENING = [/\bnothing to worry about\b/i, /\bnot (serious|urgent|an emergency)\b/i, /\bno need to (see|call|seek)\b/i, /\b(probably|likely) (fine|harmless|benign)\b/i, /\bcan wait\b/i];
 
+/** First `n` sentences of a text: the hard length limit behind the prompt's "be brief". */
+export function sentences(text: string, n: number): string {
+  const parts = text.trim().match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) ?? [text];
+  return parts.slice(0, n).join("").trim();
+}
+
 export function sanitizePainInsight(out: AIPainInsightOutput, req: PainInsightRequest): AIPainInsightOutput {
   const banned = (diagnosisWord = false) => [...MEDICATION, ...(diagnosisWord ? [DIAGNOSIS[0]] : DIAGNOSIS), ...(req.red_flags.length ? SOFTENING : [])];
   const ok = (t: string, diagnosisWord = false) => t.trim().length > 0 && !banned(diagnosisWord).some((re) => re.test(t));
   const keep = (items: string[], max: number, diagnosisWord = false) => items.filter((t) => ok(t, diagnosisWord)).slice(0, max);
   const ids = new Set(req.candidates.map((c) => c.id));
   let dataOnly = 0;
+  out = {
+    ...out,
+    headline: sentences(out.headline, 1),
+    summary: sentences(out.summary, 2),
+    see_someone: sentences(out.see_someone, 1),
+    factors: out.factors.map((f) => ({ ...f, explanation: sentences(f.explanation, 1) })),
+    what_helps: out.what_helps.map((t) => sentences(t, 1)),
+  };
   const factors = out.factors
     .filter((f) => {
       if (f.candidate_id != null) return ids.has(f.candidate_id);
@@ -157,15 +175,15 @@ export function sanitizePainInsight(out: AIPainInsightOutput, req: PainInsightRe
     .filter((f) => ok(f.title) && ok(f.explanation))
     .map((f) => ({ ...f, confidence: Math.min(1, Math.max(0, f.confidence)) }))
     .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, 5);
+    .slice(0, 4);
   return {
     headline: ok(out.headline) ? out.headline : "",
     summary: ok(out.summary) ? out.summary : "",
     factors,
-    what_helps: keep(out.what_helps, 6),
-    avoid: keep(out.avoid, 4),
+    what_helps: keep(out.what_helps, 5),
+    avoid: keep(out.avoid, 2),
     see_someone: ok(out.see_someone) ? out.see_someone : "",
-    watch_for: keep(out.watch_for, 4),
-    doctor_questions: keep(out.doctor_questions, 4, true),
+    watch_for: keep(out.watch_for, 2),
+    doctor_questions: keep(out.doctor_questions, 3, true),
   };
 }

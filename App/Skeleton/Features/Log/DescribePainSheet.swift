@@ -21,7 +21,7 @@ struct DescribePainSheet: View {
                 Button("Cancel") { model.isDescribeSheetPresented = false }
                     .buttonStyle(.secondaryPill)
             }
-            Text("Where it hurts, what it feels like and since when. You'll check everything before it's saved.")
+            Text("Where, what it feels like, and since when.")
                 .font(Theme.Font.callout)
                 .foregroundStyle(Theme.Color.secondaryText)
             HStack(alignment: .top, spacing: 10) {
@@ -47,7 +47,7 @@ struct DescribePainSheet: View {
                 Text(voiceError).font(Theme.Font.caption).foregroundStyle(Theme.Color.redFlag)
             }
             if notFound {
-                Text("Couldn't place that on the body. Try naming the area (e.g. \u{201C}lower back\u{201D}), or tap the body instead.")
+                Text("Couldn't place that. Try naming the area, like \u{201C}lower back\u{201D}.")
                     .font(Theme.Font.caption)
                     .foregroundStyle(Theme.Color.redFlag)
             }

@@ -145,7 +145,7 @@ public struct Insight: Sendable, Hashable {
     /// How many AI items the rules removed (shown in debug, logged for review).
     public var droppedCount: Int
 
-    public static let disclaimer = "Skeleton shows patterns and possible contributors, not a diagnosis. Not medical advice; see a professional about your pain."
+    public static let disclaimer = "Possible causes, not a diagnosis. Not medical advice."
 }
 
 /// Rules layer, step 3: validate and constrain AI output.
@@ -180,12 +180,13 @@ public struct InsightValidator: Sendable {
                 continue
             }
             f.confidence = min(max(f.confidence, 0), 1)
+            f.explanation = f.explanation.firstSentences(1)
             factors.append(f)
         }
         factors.sort { $0.confidence > $1.confidence }
 
         // Fall back to the library's own wording when the AI summary is not acceptable.
-        var summary = output.summary
+        var summary = output.summary.firstSentences(2)
         if !isAllowed(summary, request: request) || summary.trimmingCharacters(in: .whitespaces).isEmpty {
             dropped += 1
             summary = request.pathways.first?.plainExplanation ?? "These pains appeared close together in connected areas."

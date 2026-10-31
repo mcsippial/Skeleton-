@@ -41,7 +41,7 @@ export function causeEngineHandler(provider: InsightProvider, store: Store, mode
     if (!parsed.success) return json({ error: "invalid_request", issues: parsed.error.issues.length }, 400);
     try {
       // Same episode content + same model → reuse the saved insight (no AI call, no usage).
-      const key = await sha256(JSON.stringify({ model: modelName(), request: parsed.data }));
+      const key = await sha256(JSON.stringify({ v: 2, model: modelName(), request: parsed.data }));
       const cached = await store.cachedInsight(userId, key);
       if (cached) return json({ insight: cached.ai_output, model: cached.model_version, cached: true });
 
@@ -73,7 +73,8 @@ export function painInsightHandler(provider: PainInsightProvider, store: Store, 
     if (!parsed.success) return json({ error: "invalid_request", issues: parsed.error.issues.length }, 400);
     try {
       // Same pain, answers and context + same model → reuse the saved insight.
-      const key = await sha256(JSON.stringify({ kind: "pain", model: modelName(), request: parsed.data }));
+      // `v` changes when the prompt changes, so older saved wording isn't reused.
+      const key = await sha256(JSON.stringify({ kind: "pain", v: 2, model: modelName(), request: parsed.data }));
       const cached = await store.cachedInsight(userId, key);
       if (cached) return json({ insight: cached.ai_output, model: cached.model_version, cached: true });
 

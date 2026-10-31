@@ -19,6 +19,16 @@ final class PainInsightTests: XCTestCase {
         for r in F.data.atlas.regions { XCTAssertNotNil(guides.guide(forRegion: r.id), r.id) }
     }
 
+    func testEveryQuestionHasAShortYesTag() {
+        for g in guides.guides {
+            for c in g.contributors where c.ask != nil {
+                let tag = c.yesTag ?? ""
+                XCTAssertFalse(tag.isEmpty, c.id)
+                XCTAssertLessThanOrEqual(tag.split(separator: " ").count, 6, "\(c.id): \(tag)")
+            }
+        }
+    }
+
     func testGuideContentPassesTheSafetyFilter() {
         let filter = SafetyFilter(redFlagsPresent: true, sex: nil)
         for g in guides.guides {
@@ -62,7 +72,7 @@ final class PainInsightTests: XCTestCase {
         let before = plain.candidates.first { $0.id == "lower_back.nerve" }?.score ?? 0
         let after = try XCTUnwrap(answered.candidates.first { $0.id == "lower_back.nerve" })
         XCTAssertGreaterThan(after.score, before)
-        XCTAssert(after.why.contains { $0.hasPrefix("You said yes") })
+        XCTAssert(after.why.contains("Travels down the leg or tingles"), "\(after.why)")
         _ = q
     }
 
@@ -155,5 +165,27 @@ final class PainInsightWireTests: XCTestCase {
         let r = try JSONDecoder().decode(EdgeWire.PainInsightWireResponse.self, from: Data(body.utf8))
         XCTAssertEqual(r.insight.factors.first?.candidateID, "lower_back.strain")
         XCTAssertEqual(r.insight.whatHelps, ["Walk"])
+    }
+}
+
+final class BrevityTests: XCTestCase {
+    func testFirstSentences() {
+        XCTAssertEqual("One. Two. Three.".firstSentences(2), "One. Two.")
+        XCTAssertEqual("No full stop".firstSentences(1), "No full stop")
+    }
+
+    func testValidatorCutsLongAIText() {
+        let F = Fixtures.self
+        let rules = PainInsightRules(data: F.data, guides: F.data.guides!)
+        let e = PainEntry(userID: DemoData.userID, regionIDs: ["lumbar_l"], painType: .sharp, intensity: 6, onsetAt: Date(), triggers: ["Lifting"])
+        let req = rules.request(for: e, allEntries: [e])
+        let out = AIPainInsightOutput(headline: "Often a strain. Usually settles.", summary: "A. B. C.",
+                                      factors: [.init(title: "Strain", explanation: "One. Two.", confidence: 0.7, candidateID: "lower_back.strain")],
+                                      whatHelps: ["Walk"], avoid: [], seeSomeone: "See a physio. Or a GP.", watchFor: [], doctorQuestions: [])
+        let v = PainInsightValidator().validate(out, request: req, modelVersion: "m")
+        XCTAssertEqual(v.headline, "Often a strain.")
+        XCTAssertEqual(v.summary, "A. B.")
+        XCTAssertEqual(v.factors[0].explanation, "One.")
+        XCTAssertEqual(v.seeSomeone, "See a physio.")
     }
 }

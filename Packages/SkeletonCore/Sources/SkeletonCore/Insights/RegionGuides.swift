@@ -76,6 +76,8 @@ public struct GuideContributor: Codable, Sendable, Identifiable {
     public let signals: Signals
     /// Yes/no question that helps tell this contributor apart.
     public let ask: String?
+    /// Short fact shown as a reason when the answer is yes ("Travels down the leg or tingles").
+    public let yesTag: String?
     /// Only applies to this sex (e.g. period pain).
     public let sex: BiologicalSex?
     /// Always offer this question when the contributor applies: the answer rules something important in or out.
@@ -83,6 +85,6 @@ public struct GuideContributor: Codable, Sendable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case id, name, explanation, prior, signals, ask, sex
-        case alwaysAsk = "always_ask"
+        case alwaysAsk = "always_ask", yesTag = "yes_tag"
     }
 }

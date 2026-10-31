@@ -87,13 +87,15 @@ const SYSTEM = `You help people understand how their pain may be connected, insi
 
 Write for the person, in plain English, warm and direct, short sentences, no jargon without a quick explanation.
 
+Be brief: people read this on a phone, and text past each limit is cut off. Don't define terms or explain how Skeleton works.
+
 What to return:
-- summary: 2-3 sentences on how these pains may be connected, grounded in the matched pathways.
-- factors: up to 5 likely contributing factors, most likely first. Each has a short title, a 1-2 sentence explanation tied to what they logged, a confidence from 0 to 1, and pathway_id set to the matched pathway it rests on (or null if it comes only from their own data, such as a trigger they noted).
-- patterns: things you notice in their data (timing, order, triggers, what helps, health metrics). Only what the data supports.
-- self_care: a few gentle, low-risk ideas (movement, posture, rest, heat or ice, sleep, noting triggers).
-- doctor_questions: questions worth asking a doctor or physical therapist.
-- specialist: who is a good fit to see, or null.
+- summary: max 2 short sentences (35 words) on how these pains may be connected.
+- factors: up to 4, most likely first. Each: a 2-5 word title, ONE sentence of max 18 words tied to what they logged, a confidence from 0 to 1, and pathway_id set to the matched pathway it rests on (or null if it comes only from their own data).
+- patterns: up to 3 things in their data, max 15 words each. Only what the data supports.
+- self_care: 3 to 4 actions, max 8 words each, starting with a verb.
+- doctor_questions: 2 questions, max 12 words each.
+- specialist: who to see, max 6 words, or null.
 
 Rules you must follow:
 - Show patterns and possible contributors, never a diagnosis. Use phrases like "often linked to", "commonly caused by", "worth asking your doctor about". Never write "you have", "this is", "diagnosis", or name a condition as a fact.
@@ -160,14 +162,20 @@ function allowed(text: string, req: InsightRequest, opts: { allowDiagnosisWord?:
   return !banned.some((re) => re.test(text));
 }
 
+function firstSentences(text: string, n: number): string {
+  const parts = text.trim().match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) ?? [text];
+  return parts.slice(0, n).join("").trim();
+}
+
 export function sanitizeInsight(out: AIInsightOutput, req: InsightRequest): AIInsightOutput {
+  out = { ...out, summary: firstSentences(out.summary, 2), factors: out.factors.map((f) => ({ ...f, explanation: firstSentences(f.explanation, 1) })) };
   const matched = new Set(req.pathways.map((p) => p.id));
-  const keep = (items: string[], opts = {}) => items.filter((s) => s.trim() && allowed(s, req, opts)).slice(0, 6);
+  const keep = (items: string[], opts = {}) => items.filter((s) => s.trim() && allowed(s, req, opts)).slice(0, 4);
   const factors = out.factors
     .filter((f) => (f.pathway_id == null || matched.has(f.pathway_id)) && allowed(f.title, req) && allowed(f.explanation, req))
     .map((f) => ({ ...f, confidence: Math.min(1, Math.max(0, f.confidence)) }))
     .sort((a, b) => b.confidence - a.confidence)
-    .slice(0, 5);
+    .slice(0, 4);
   return {
     summary: allowed(out.summary, req) && out.summary.trim()
       ? out.summary

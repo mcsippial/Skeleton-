@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "description": "Region guides for single-pain insights. The rules layer scores each guide's contributors against what the person logged (pain type, triggers they ticked, words in their notes, pattern, age, sex, recurrence, health data, answers to follow-up questions) and passes the ranked candidates to Claude, which may only explain within them. Wording is deliberately 'often linked to', never a diagnosis. Contributors marked always_ask have their question offered whenever they apply, because the answer rules an important possibility in or out.",
+  "description": "Region guides for single-pain insights. The rules layer scores each guide's contributors against what the person logged (pain type, triggers they ticked, words in their notes, pattern, age, sex, recurrence, health data, answers to follow-up questions) and passes the ranked candidates to Claude, which may only explain within them. Wording is deliberately 'often linked to', never a diagnosis. Contributors marked always_ask have their question offered whenever they apply, because the answer rules an important possibility in or out. Each question has a yes_tag: the short fact shown as a reason when the person answers yes.",
   "scoring": {
     "pain_type": 0.15,
     "trigger": 0.2,
@@ -125,7 +125,8 @@
               "neck"
             ]
           },
-          "ask": "Do your neck or shoulders feel tight or sore too?"
+          "ask": "Do your neck or shoulders feel tight or sore too?",
+          "yes_tag": "Tight neck or shoulders"
         },
         {
           "id": "head.sleep",
@@ -143,7 +144,8 @@
               "low_sleep"
             ]
           },
-          "ask": "Have you slept less or worse than usual lately?"
+          "ask": "Have you slept less or worse than usual lately?",
+          "yes_tag": "Sleeping less than usual"
         },
         {
           "id": "head.eye_strain",
@@ -160,7 +162,8 @@
               "reading"
             ]
           },
-          "ask": "Does it build up during long screen sessions?"
+          "ask": "Does it build up during long screen sessions?",
+          "yes_tag": "Builds with screen time"
         },
         {
           "id": "head.jaw",
@@ -179,7 +182,8 @@
             ]
           },
           "ask": "Do you clench your jaw or grind your teeth?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Clenching or grinding"
         },
         {
           "id": "head.hydration",
@@ -196,7 +200,8 @@
               "hangover"
             ]
           },
-          "ask": "Have you been drinking less or skipping meals?"
+          "ask": "Have you been drinking less or skipping meals?",
+          "yes_tag": "Less water or skipped meals"
         },
         {
           "id": "head.stress",
@@ -269,7 +274,8 @@
               "teeth"
             ]
           },
-          "ask": "Is it worse when you wake up, or do you notice clenching?"
+          "ask": "Is it worse when you wake up, or do you notice clenching?",
+          "yes_tag": "Worse on waking or clenching"
         },
         {
           "id": "jaw.joint",
@@ -293,7 +299,8 @@
               "open"
             ]
           },
-          "ask": "Does your jaw click, lock or hurt when you open wide?"
+          "ask": "Does your jaw click, lock or hurt when you open wide?",
+          "yes_tag": "Clicks or hurts opening wide"
         },
         {
           "id": "jaw.posture",
@@ -310,7 +317,8 @@
               "posture"
             ]
           },
-          "ask": "Do you spend long periods at a desk or looking down at a phone?"
+          "ask": "Do you spend long periods at a desk or looking down at a phone?",
+          "yes_tag": "Long desk or phone time"
         },
         {
           "id": "jaw.dental",
@@ -332,7 +340,8 @@
             ]
           },
           "ask": "Is one tooth sensitive to hot, cold or biting?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "A sensitive tooth"
         },
         {
           "id": "jaw.ear",
@@ -348,7 +357,8 @@
               "congested"
             ]
           },
-          "ask": "Any cold, blocked nose or ear discomfort?"
+          "ask": "Any cold, blocked nose or ear discomfort?",
+          "yes_tag": "Cold or ear discomfort"
         }
       ],
       "self_care": [
@@ -406,7 +416,8 @@
               "driving"
             ]
           },
-          "ask": "Is it worse after long desk or phone sessions?"
+          "ask": "Is it worse after long desk or phone sessions?",
+          "yes_tag": "Worse after desk or phone use"
         },
         {
           "id": "neck.sleep_position",
@@ -428,7 +439,8 @@
               "slept"
             ]
           },
-          "ask": "Was it there when you woke up?"
+          "ask": "Was it there when you woke up?",
+          "yes_tag": "Started overnight"
         },
         {
           "id": "neck.muscle_strain",
@@ -451,7 +463,8 @@
               "lifted"
             ]
           },
-          "ask": "Did it start after a sudden movement, lifting or sport?"
+          "ask": "Did it start after a sudden movement, lifting or sport?",
+          "yes_tag": "Started after a sudden movement"
         },
         {
           "id": "neck.nerve",
@@ -474,7 +487,8 @@
             ]
           },
           "ask": "Does it travel into your shoulder, arm or hand, or come with tingling?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Travels into the arm or tingles"
         },
         {
           "id": "neck.stress",
@@ -549,7 +563,8 @@
               "paint"
             ]
           },
-          "ask": "Does it hurt to lift your arm out to the side or overhead?"
+          "ask": "Does it hurt to lift your arm out to the side or overhead?",
+          "yes_tag": "Hurts lifting the arm"
         },
         {
           "id": "shoulder.posture",
@@ -566,7 +581,8 @@
               "computer"
             ]
           },
-          "ask": "Do you spend long periods at a desk?"
+          "ask": "Do you spend long periods at a desk?",
+          "yes_tag": "Long desk time"
         },
         {
           "id": "shoulder.neck",
@@ -587,7 +603,8 @@
             ]
           },
           "ask": "Is your neck stiff or sore too?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Neck sore too"
         },
         {
           "id": "shoulder.strain",
@@ -610,7 +627,8 @@
               "carried"
             ]
           },
-          "ask": "Did it start after lifting, pushing or a sudden pull?"
+          "ask": "Did it start after lifting, pushing or a sudden pull?",
+          "yes_tag": "Started after lifting or a pull"
         },
         {
           "id": "shoulder.stiffness",
@@ -628,7 +646,8 @@
             ],
             "age_over": 40
           },
-          "ask": "Is it getting harder to move your arm over weeks?"
+          "ask": "Is it getting harder to move your arm over weeks?",
+          "yes_tag": "Getting stiffer over weeks"
         }
       ],
       "self_care": [
@@ -685,7 +704,8 @@
               "driving"
             ]
           },
-          "ask": "Is it worse after long periods sitting or looking at a screen?"
+          "ask": "Is it worse after long periods sitting or looking at a screen?",
+          "yes_tag": "Worse after sitting or screens"
         },
         {
           "id": "upper_back.strain",
@@ -708,7 +728,8 @@
               "row"
             ]
           },
-          "ask": "Did it start after lifting, twisting or sport?"
+          "ask": "Did it start after lifting, twisting or sport?",
+          "yes_tag": "Started after lifting or twisting"
         },
         {
           "id": "upper_back.rib_joint",
@@ -726,7 +747,8 @@
               "twist"
             ]
           },
-          "ask": "Does it catch when you breathe in deeply or twist?"
+          "ask": "Does it catch when you breathe in deeply or twist?",
+          "yes_tag": "Catches on deep breaths"
         },
         {
           "id": "upper_back.stress",
@@ -758,7 +780,8 @@
               "mattress"
             ]
           },
-          "ask": "Is it worst when you first wake up?"
+          "ask": "Is it worst when you first wake up?",
+          "yes_tag": "Worst on waking"
         }
       ],
       "self_care": [
@@ -813,7 +836,8 @@
               "lifted"
             ]
           },
-          "ask": "Is it sore when you press on it or move your arms?"
+          "ask": "Is it sore when you press on it or move your arms?",
+          "yes_tag": "Sore to press or move"
         },
         {
           "id": "chest.cartilage",
@@ -832,7 +856,8 @@
               "breath"
             ]
           },
-          "ask": "Is it tender when you press along the breastbone?"
+          "ask": "Is it tender when you press along the breastbone?",
+          "yes_tag": "Tender along the breastbone"
         },
         {
           "id": "chest.posture",
@@ -903,7 +928,8 @@
               "heartburn"
             ]
           },
-          "ask": "Is it related to eating, or are your bowels different from usual?"
+          "ask": "Is it related to eating, or are your bowels different from usual?",
+          "yes_tag": "Linked to eating or bowels"
         },
         {
           "id": "abdomen.muscle",
@@ -928,7 +954,8 @@
               "lifted"
             ]
           },
-          "ask": "Does it hurt more when you move, sit up or tense your stomach?"
+          "ask": "Does it hurt more when you move, sit up or tense your stomach?",
+          "yes_tag": "Worse moving or tensing"
         },
         {
           "id": "abdomen.period",
@@ -948,7 +975,8 @@
             ]
           },
           "ask": "Is it linked to your period?",
-          "sex": "female"
+          "sex": "female",
+          "yes_tag": "Linked to your period"
         },
         {
           "id": "abdomen.urinary",
@@ -968,7 +996,8 @@
             ]
           },
           "ask": "Any burning when you pee, or needing to go more often?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Burning or peeing more"
         }
       ],
       "self_care": [
@@ -1022,7 +1051,8 @@
               "golf"
             ]
           },
-          "ask": "Did it start after twisting, lifting or sport?"
+          "ask": "Did it start after twisting, lifting or sport?",
+          "yes_tag": "Started after twisting or lifting"
         },
         {
           "id": "flank.kidney",
@@ -1044,7 +1074,8 @@
             ]
           },
           "ask": "Is it with fever, or pain or changes when you pee?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Fever or changes peeing"
         },
         {
           "id": "flank.posture",
@@ -1112,7 +1143,8 @@
               "picked up"
             ]
           },
-          "ask": "Did it start during or after lifting, bending or a workout?"
+          "ask": "Did it start during or after lifting, bending or a workout?",
+          "yes_tag": "Started after lifting or a workout"
         },
         {
           "id": "lower_back.sitting",
@@ -1136,7 +1168,8 @@
               "flight"
             ]
           },
-          "ask": "Is it worse after sitting for a long time?"
+          "ask": "Is it worse after sitting for a long time?",
+          "yes_tag": "Worse after sitting"
         },
         {
           "id": "lower_back.nerve",
@@ -1160,7 +1193,8 @@
             ]
           },
           "ask": "Does it travel into your buttock or down your leg, or come with tingling?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Travels down the leg or tingles"
         },
         {
           "id": "lower_back.joint",
@@ -1180,7 +1214,8 @@
             ],
             "age_over": 40
           },
-          "ask": "Is it stiffest in the morning or worse when leaning back?"
+          "ask": "Is it stiffest in the morning or worse when leaning back?",
+          "yes_tag": "Stiffest in the morning"
         },
         {
           "id": "lower_back.weak_support",
@@ -1212,7 +1247,8 @@
             ]
           },
           "ask": "Is it linked to your period?",
-          "sex": "female"
+          "sex": "female",
+          "yes_tag": "Linked to your period"
         }
       ],
       "self_care": [
@@ -1269,7 +1305,8 @@
               "running"
             ]
           },
-          "ask": "Is it worse standing on one leg, climbing stairs or getting out of a car?"
+          "ask": "Is it worse standing on one leg, climbing stairs or getting out of a car?",
+          "yes_tag": "Worse on stairs or one leg"
         },
         {
           "id": "si.glute_tight",
@@ -1294,7 +1331,8 @@
               "tight"
             ]
           },
-          "ask": "Is it worse after sitting, or ease with stretching the buttock?"
+          "ask": "Is it worse after sitting, or ease with stretching the buttock?",
+          "yes_tag": "Worse after sitting"
         },
         {
           "id": "si.nerve",
@@ -1316,7 +1354,8 @@
             ]
           },
           "ask": "Does it travel down the back of your leg or come with tingling?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Travels down the leg or tingles"
         },
         {
           "id": "si.pregnancy",
@@ -1385,7 +1424,8 @@
               "night"
             ]
           },
-          "ask": "Is it sore lying on that side at night?"
+          "ask": "Is it sore lying on that side at night?",
+          "yes_tag": "Sore lying on that side"
         },
         {
           "id": "hip.flexor",
@@ -1409,7 +1449,8 @@
               "sitting"
             ]
           },
-          "ask": "Is it worse lifting your knee or after sitting?"
+          "ask": "Is it worse lifting your knee or after sitting?",
+          "yes_tag": "Worse lifting the knee"
         },
         {
           "id": "hip.joint",
@@ -1430,7 +1471,8 @@
             ],
             "age_over": 45
           },
-          "ask": "Is it stiff putting on socks or getting out of a car?"
+          "ask": "Is it stiff putting on socks or getting out of a car?",
+          "yes_tag": "Stiff putting on socks"
         },
         {
           "id": "hip.from_back",
@@ -1449,7 +1491,8 @@
             ]
           },
           "ask": "Is your lower back sore too?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Lower back sore too"
         }
       ],
       "self_care": [
@@ -1506,7 +1549,8 @@
               "gym"
             ]
           },
-          "ask": "Did it start with sport, kicking or a sudden stretch?"
+          "ask": "Did it start with sport, kicking or a sudden stretch?",
+          "yes_tag": "Started with sport or a stretch"
         },
         {
           "id": "groin.hip_joint",
@@ -1526,7 +1570,8 @@
             ],
             "age_over": 40
           },
-          "ask": "Is it stiff or sore when you turn your leg in or squat?"
+          "ask": "Is it stiff or sore when you turn your leg in or squat?",
+          "yes_tag": "Sore turning the leg or squatting"
         },
         {
           "id": "groin.from_back",
@@ -1545,7 +1590,8 @@
             ]
           },
           "ask": "Have you had lower back pain recently?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Recent lower back pain"
         },
         {
           "id": "groin.hernia",
@@ -1564,7 +1610,8 @@
             ]
           },
           "ask": "Is there a lump or bulge that's sore when you cough or lift?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "A lump or bulge"
         }
       ],
       "self_care": [
@@ -1619,7 +1666,8 @@
               "gym"
             ]
           },
-          "ask": "Did it start suddenly during sport or a sprint?"
+          "ask": "Did it start suddenly during sport or a sprint?",
+          "yes_tag": "Started during sport"
         },
         {
           "id": "thigh.overuse",
@@ -1646,7 +1694,8 @@
               "workout_spike"
             ]
           },
-          "ask": "Have you increased your training recently?"
+          "ask": "Have you increased your training recently?",
+          "yes_tag": "More training lately"
         },
         {
           "id": "thigh.nerve",
@@ -1668,7 +1717,8 @@
             ]
           },
           "ask": "Is there tingling, numbness or burning?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Tingling or burning"
         },
         {
           "id": "thigh.it_band",
@@ -1743,7 +1793,8 @@
               "sitting"
             ]
           },
-          "ask": "Is it worse going down stairs, squatting or after sitting with bent knees?"
+          "ask": "Is it worse going down stairs, squatting or after sitting with bent knees?",
+          "yes_tag": "Worse on stairs or squats"
         },
         {
           "id": "knee.hip_weakness",
@@ -1780,7 +1831,8 @@
               "outside"
             ]
           },
-          "ask": "Does it come on partway through a run or ride?"
+          "ask": "Does it come on partway through a run or ride?",
+          "yes_tag": "Comes on mid-run or ride"
         },
         {
           "id": "knee.twist",
@@ -1801,7 +1853,8 @@
             ]
           },
           "ask": "Did you twist it, or does it click, lock, give way or swell?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Twisted, clicks or swells"
         },
         {
           "id": "knee.wear",
@@ -1875,7 +1928,8 @@
               "workout_spike"
             ]
           },
-          "ask": "Did you recently increase running or jumping?"
+          "ask": "Did you recently increase running or jumping?",
+          "yes_tag": "More running or jumping lately"
         },
         {
           "id": "lower_leg.calf_strain",
@@ -1898,7 +1952,8 @@
             ]
           },
           "ask": "Did you feel a sudden pull during sport?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Sudden pull during sport"
         },
         {
           "id": "lower_leg.cramp",
@@ -1915,7 +1970,8 @@
               "water"
             ]
           },
-          "ask": "Does it come as sudden, tight cramps?"
+          "ask": "Does it come as sudden, tight cramps?",
+          "yes_tag": "Comes as cramps"
         },
         {
           "id": "lower_leg.tight",
@@ -1989,7 +2045,8 @@
               "standing"
             ]
           },
-          "ask": "Is it worst with your first steps in the morning?"
+          "ask": "Is it worst with your first steps in the morning?",
+          "yes_tag": "Worst on first morning steps"
         },
         {
           "id": "foot.achilles",
@@ -2012,7 +2069,8 @@
               "achilles"
             ]
           },
-          "ask": "Is the back of your heel stiff in the morning?"
+          "ask": "Is the back of your heel stiff in the morning?",
+          "yes_tag": "Heel stiff in the morning"
         },
         {
           "id": "foot.sprain",
@@ -2033,7 +2091,8 @@
             ]
           },
           "ask": "Did you roll or twist your ankle?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Rolled or twisted ankle"
         },
         {
           "id": "foot.footwear",
@@ -2117,7 +2176,8 @@
               "carried"
             ]
           },
-          "ask": "Did it start after lifting, carrying or the gym?"
+          "ask": "Did it start after lifting, carrying or the gym?",
+          "yes_tag": "Started after lifting"
         },
         {
           "id": "arm.shoulder",
@@ -2134,7 +2194,8 @@
               "overhead"
             ]
           },
-          "ask": "Does it hurt more lifting your arm to the side?"
+          "ask": "Does it hurt more lifting your arm to the side?",
+          "yes_tag": "Hurts lifting the arm"
         },
         {
           "id": "arm.nerve",
@@ -2156,7 +2217,8 @@
             ]
           },
           "ask": "Is there tingling or numbness, or neck pain too?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Tingling, or neck pain too"
         }
       ],
       "self_care": [
@@ -2213,7 +2275,8 @@
               "tools"
             ]
           },
-          "ask": "Is it worse gripping, lifting a kettle or using a mouse?"
+          "ask": "Is it worse gripping, lifting a kettle or using a mouse?",
+          "yes_tag": "Worse gripping or using a mouse"
         },
         {
           "id": "elbow.nerve",
@@ -2236,7 +2299,8 @@
             ]
           },
           "ask": "Do your ring or little fingers tingle?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Ring or little finger tingles"
         },
         {
           "id": "elbow.knock",
@@ -2308,7 +2372,8 @@
               "gaming"
             ]
           },
-          "ask": "Is it worse after typing, phone use or repetitive work?"
+          "ask": "Is it worse after typing, phone use or repetitive work?",
+          "yes_tag": "Worse after typing or phone use"
         },
         {
           "id": "hand.nerve_wrist",
@@ -2331,7 +2396,8 @@
             ]
           },
           "ask": "Do your thumb and first fingers tingle, especially at night?",
-          "always_ask": true
+          "always_ask": true,
+          "yes_tag": "Fingers tingle at night"
         },
         {
           "id": "hand.joint",
@@ -2351,7 +2417,8 @@
             ],
             "age_over": 45
           },
-          "ask": "Are your finger joints stiff in the morning?"
+          "ask": "Are your finger joints stiff in the morning?",
+          "yes_tag": "Stiff fingers in the morning"
         },
         {
           "id": "hand.sprain",
@@ -2370,7 +2437,8 @@
               "sprain"
             ]
           },
-          "ask": "Did you fall onto your hand or twist your wrist?"
+          "ask": "Did you fall onto your hand or twist your wrist?",
+          "yes_tag": "Fell on or twisted the wrist"
         }
       ],
       "self_care": [
@@ -2419,7 +2487,8 @@
               "sore throat"
             ]
           },
-          "ask": "Any cold, fever, or soreness when swallowing?"
+          "ask": "Any cold, fever, or soreness when swallowing?",
+          "yes_tag": "Cold, fever or sore to swallow"
         },
         {
           "id": "throat.neck_muscle",

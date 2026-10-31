@@ -21,7 +21,7 @@ struct LogPainSheet: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.l) {
                 header
                 if model.form.inputMethod != .tap {
-                    Text("Check what Skeleton understood from “\(model.form.rawText ?? "")” and fix anything that's off before saving.")
+                    Text("Check and edit before saving.")
                         .font(Theme.Font.callout)
                         .foregroundStyle(Theme.Color.secondaryText)
                 }
@@ -182,7 +182,7 @@ struct LogPainSheet: View {
             Button(model.form.painType == nil ? "Pick what it feels like" : "Save") { save() }
                 .buttonStyle(.primaryPill)
                 .disabled(model.form.painType == nil || regions.isEmpty || saving)
-            Text("Skeleton shows patterns, not a diagnosis. Not medical advice.")
+            Text("Not medical advice.")
                 .font(Theme.Font.caption)
                 .foregroundStyle(Theme.Color.secondaryText)
         }

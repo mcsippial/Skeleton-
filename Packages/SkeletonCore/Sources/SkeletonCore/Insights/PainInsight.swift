@@ -260,7 +260,7 @@ public struct PainInsightRules: Sendable {
         if s.recurring == true, recurring { score += w.recurring; why.append("It's hurt here before") }
         if let answer = entry.clarifications?.first(where: { $0.questionID == c.id }) {
             switch answer.answer {
-            case .yes: score += w.answerYes; why.append("You said yes: \(answer.question.trimmingCharacters(in: CharacterSet(charactersIn: "?")).lowercasedFirst)")
+            case .yes: score += w.answerYes; why.append(c.yesTag ?? answer.question)
             case .no: score += w.answerNo
             case .unsure: break
             }
@@ -274,6 +274,19 @@ public struct PainInsightRules: Sendable {
 
 extension String {
     var lowercasedFirst: String { prefix(1).lowercased() + dropFirst() }
+
+    /// The first `n` sentences: the hard length limit behind the AI prompt's "be brief".
+    public func firstSentences(_ n: Int) -> String {
+        var out = "", count = 0
+        for ch in self {
+            out.append(ch)
+            if ".!?".contains(ch) {
+                count += 1
+                if count == n { break }
+            }
+        }
+        return out.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 // MARK: - Mock provider (rules-only wording)
@@ -292,20 +305,17 @@ public struct MockPainInsightProvider: PainInsightProvider {
         let top = r.candidates.first
         let headline = top.map { "\(r.regionName) pain like this is often linked to \($0.name.lowercasedFirst)." }
             ?? "Here's what's commonly behind pain in your \(area)."
-        var summary = top?.explanation ?? "Pain here has several common causes; the questions below help narrow it down."
-        if r.candidates.count > 1 {
-            summary += " Other common contributors are \(r.candidates.dropFirst().prefix(2).map { $0.name.lowercasedFirst }.joined(separator: " and "))."
-        }
+        let summary = (top?.explanation ?? "Pain here has several common causes.").firstSentences(2)
         let watch = r.spread.map { "Pain spreading to your \($0.toRegionNames.prefix(2).map { $0.lowercasedFirst }.joined(separator: " or "))" }
         return AIPainInsightOutput(
             headline: headline,
             summary: summary,
-            factors: r.candidates.map { .init(title: $0.name, explanation: $0.explanation, confidence: $0.score, candidateID: $0.id) },
-            whatHelps: r.guide?.selfCare ?? ["Keep moving gently within comfort", "Notice what makes it better or worse"],
+            factors: r.candidates.map { .init(title: $0.name, explanation: $0.explanation.firstSentences(1), confidence: $0.score, candidateID: $0.id) },
+            whatHelps: Array((r.guide?.selfCare ?? ["Keep moving gently within comfort"]).prefix(4)),
             avoid: r.guide?.avoid ?? [],
             seeSomeone: (r.guide?.seeSomeoneIf.first).map { "See someone if \($0.lowercasedFirst)." } ?? "See a professional if it isn't improving after 1–2 weeks.",
             watchFor: Array(watch.prefix(2)),
-            doctorQuestions: ["What's most likely causing my \(area) pain?", "Which movements should I keep doing, and which should I avoid for now?"])
+            doctorQuestions: ["What's most likely causing this?", "What should I avoid for now?"])
     }
 }
 
@@ -317,7 +327,13 @@ public struct MockPainInsightProvider: PainInsightProvider {
 public struct PainInsightValidator: Sendable {
     public init() {}
 
-    public func validate(_ out: AIPainInsightOutput, request r: PainInsightRequest, modelVersion: String) -> PainInsight {
+    public func validate(_ raw: AIPainInsightOutput, request r: PainInsightRequest, modelVersion: String) -> PainInsight {
+        // Hard length limits: one-sentence headline and causes, two-sentence summary.
+        var out = raw
+        out.headline = raw.headline.firstSentences(1)
+        out.summary = raw.summary.firstSentences(2)
+        out.seeSomeone = raw.seeSomeone.firstSentences(1)
+        out.factors = raw.factors.map { var f = $0; f.explanation = f.explanation.firstSentences(1); return f }
         let filter = SafetyFilter(redFlagsPresent: !r.redFlags.isEmpty, sex: r.demographics?.sex)
         var dropped = 0
         func ok(_ s: String, diagnosisWord: Bool = false) -> Bool {
@@ -342,27 +358,27 @@ public struct PainInsightValidator: Sendable {
         }
         factors.sort { $0.confidence > $1.confidence }
         if factors.isEmpty {
-            factors = r.candidates.map { PainInsightFactor(id: $0.id, title: $0.name, explanation: $0.explanation, confidence: $0.score, why: $0.why) }
+            factors = r.candidates.map { PainInsightFactor(id: $0.id, title: $0.name, explanation: $0.explanation.firstSentences(1), confidence: $0.score, why: $0.why) }
         }
 
         let fallback = MockPainInsightProvider.output(for: r)
-        let helps = keep(out.whatHelps, max: 6)
+        let helps = keep(out.whatHelps, max: 5)
         return PainInsight(
             entryID: r.entry.id, regionName: r.regionName,
             headline: ok(out.headline) ? out.headline : fallback.headline,
             summary: ok(out.summary) ? out.summary : fallback.summary,
             redFlags: r.redFlags,
-            factors: Array(factors.prefix(5)),
+            factors: Array(factors.prefix(4)),
             questions: r.questions,
             answered: r.entry.clarifications ?? [],
             whatHelps: helps.isEmpty ? fallback.whatHelps : helps,
-            avoid: keep(out.avoid, max: 4),
-            watchFor: keep(out.watchFor, max: 4),
+            avoid: keep(out.avoid, max: 2),
+            watchFor: keep(out.watchFor, max: 2),
             warningSigns: r.warningSigns,
             spread: r.spread,
             seeSomeone: ok(out.seeSomeone) ? out.seeSomeone : fallback.seeSomeone,
             specialist: r.guide?.specialist,
-            doctorQuestions: keep(out.doctorQuestions, max: 4, diagnosisWord: true),
+            doctorQuestions: keep(out.doctorQuestions, max: 3, diagnosisWord: true),
             healthContext: r.healthContext,
             linkedEpisode: r.linkedEpisode,
             modelVersion: modelVersion,
