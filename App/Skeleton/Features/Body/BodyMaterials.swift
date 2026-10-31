@@ -11,7 +11,8 @@ enum BodyMaterials {
             // Clear glass skin: near-white with a light clearcoat. Sheen and a high specular gave the
             // skin a yellow cast in the Simulator, so they're left off. A ShaderGraph thin-film
             // material can add true iridescence later without touching callers.
-            m.baseColor = .init(tint: UIColor(red: 0.95, green: 0.95, blue: 0.97, alpha: 1))
+            // Light grey (like Home's map) so the white seams between body areas read clearly.
+            m.baseColor = .init(tint: UIColor(red: 0.84, green: 0.84, blue: 0.87, alpha: 1))
             m.roughness = .init(floatLiteral: 0.32)
             m.metallic = .init(floatLiteral: 0)
             m.clearcoat = .init(floatLiteral: 0.6)
@@ -55,6 +56,13 @@ enum BodyMaterials {
         var m = base(for: layer)
         m.emissiveColor = .init(color: UIColor(hex: 0xFF6A3D))
         m.emissiveIntensity = 0.9
+        return m
+    }
+
+    /// White seams between skin regions; fade with the skin as x-ray increases.
+    static func seams(skinOpacity: Float) -> UnlitMaterial {
+        var m = UnlitMaterial(color: .rgbWhite)
+        m.blending = .transparent(opacity: .init(floatLiteral: min(max(skinOpacity, 0) * 1.1, 0.95)))
         return m
     }
 

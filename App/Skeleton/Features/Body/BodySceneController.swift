@@ -19,6 +19,7 @@ final class BodySceneController {
     private var layerGroups: [AnatomyLayer: Entity] = [:]
     private var applied = AppliedState()
     private var cameraAnimation: AnimationPlaybackController?
+    private let seamEntity = ModelEntity()
 
     private struct AppliedState {
         var built = false
@@ -54,6 +55,15 @@ final class BodySceneController {
             if let ibl { entity.components.set(ImageBasedLightReceiverComponent(imageBasedLight: ibl)) }
             layerGroups[s.layer]?.addChild(entity)
             structures[s.id] = (entity, s.layer)
+        }
+
+        // Segmented muscle-map look: white seams between body areas, shown with the skin.
+        let seams = await Task.detached(priority: .userInitiated) { body.seamMesh() }.value
+        if let mesh = try? Self.meshResource(seams, name: "skin-seams") {
+            seamEntity.model = ModelComponent(mesh: mesh, materials: [BodyMaterials.seams(skinOpacity: applied.skinOpacity < 0 ? 1 : applied.skinOpacity)])
+            seamEntity.isEnabled = applied.skinOpacity < 0 || applied.skinOpacity > 0.12
+            seamEntity.name = "skin-seams"
+            layerGroups[.skin]?.addChild(seamEntity)
         }
 
         addLights(height: body.morph.heightScale)
@@ -108,6 +118,8 @@ final class BodySceneController {
         if s.skinOpacity != applied.skinOpacity {
             let material = BodyMaterials.base(for: .skin, skinOpacity: s.skinOpacity)
             for (_, item) in structures where item.layer == .skin { item.entity.model?.materials = [material] }
+            seamEntity.model?.materials = [BodyMaterials.seams(skinOpacity: s.skinOpacity)]
+            seamEntity.isEnabled = s.skinOpacity > 0.12
             applied.skinOpacity = s.skinOpacity
         }
 

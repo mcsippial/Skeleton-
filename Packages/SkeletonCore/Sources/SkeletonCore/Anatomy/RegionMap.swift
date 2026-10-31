@@ -75,3 +75,48 @@ extension StockBody {
         return RegionMap2D(triangles: triangles, seams: seams, minX: lo.x, maxX: hi.x, minY: lo.y, maxY: hi.y)
     }
 }
+
+extension StockBody {
+    /// Thin ribbons along every seam between skin regions, lifted off the surface, so the 3D body
+    /// reads as the same segmented map as Home. Pure geometry; call off the main thread.
+    /// - Parameters:
+    ///   - width: ribbon width in metres (before height scaling).
+    ///   - lift: distance off the skin, above pain fills.
+    public func seamMesh(width: Float = 0.0026, lift: Float = 0.0028) -> MeshData {
+        let mesh = skinMeshForMap
+        let regions = skinTriangleRegions
+        let half: Float = width * morph.heightScale / 2
+        var owners: [UInt64: String?] = [:]
+        var out = MeshData()
+        let triCount = mesh.indices.count / 3
+        for t in 0..<triCount {
+            let region: String? = t < regions.count ? regions[t] : nil
+            for k in 0..<3 {
+                let u = Int(mesh.indices[t * 3 + k])
+                let v = Int(mesh.indices[t * 3 + (k + 1) % 3])
+                let key = UInt64(min(u, v)) << 32 | UInt64(max(u, v))
+                guard let other = owners[key] else { owners[key] = region; continue }
+                owners[key] = nil
+                if other == region { continue }
+                Self.appendRibbon(&out, mesh: mesh, u: u, v: v, half: half, lift: lift)
+            }
+        }
+        return out
+    }
+
+    private static func appendRibbon(_ out: inout MeshData, mesh: MeshData, u: Int, v: Int, half: Float, lift: Float) {
+        let nu: Vec3 = mesh.normals[u], nv: Vec3 = mesh.normals[v]
+        let n: Vec3 = (nu + nv).unit
+        let dir: Vec3 = (mesh.positions[v] - mesh.positions[u]).unit
+        let side: Vec3 = n.crossed(dir).unit * half
+        // Overlap each end by half a width so neighbouring ribbons join without gaps.
+        let a: Vec3 = mesh.positions[u] + nu * lift - dir * half
+        let b: Vec3 = mesh.positions[v] + nv * lift + dir * half
+        let base = UInt32(out.positions.count)
+        out.positions += [a - side, a + side, b + side, b - side]
+        out.normals += [nu, nu, nv, nv]
+        // Both windings, so the ribbon shows whichever way it was wound.
+        out.indices += [base, base + 1, base + 2, base, base + 2, base + 3,
+                        base, base + 2, base + 1, base, base + 3, base + 2]
+    }
+}
