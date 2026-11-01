@@ -96,7 +96,7 @@ def curves_to_meshes():
         new.name = name
 
 
-SKIN_BUDGET = 90_000
+SKIN_BUDGET = 220_000
 
 
 def pick_skin(meshes):
@@ -111,6 +111,49 @@ def pick_skin(meshes):
         return []
     tallest = max(height(o) for o in preferred)
     return [o for o in preferred if height(o) >= 0.6 * tallest]
+
+
+def skin_from_surface_regions():
+    """Z-Anatomy's body surface: ~250 patches (face, ears, fingers…) in the "Regions of human
+    body" collection. Merge them (without their display thickness), weld the shared edges and
+    close small openings (eyes, nostrils) into one smooth skin."""
+    import bmesh
+    col = next((c for c in bpy.data.collections if re.search(r"regions of (the )?human body", c.name, re.I)), None)
+    if col is None:
+        return None
+    parts = [o for o in col.all_objects if o.type == "MESH" and len(o.data.polygons) > 0
+             and not re.search(r"\.(j|g|t)$", o.name) and not re.search(r"hair|eyelash", o.name, re.I)]
+    if len(parts) < 20:
+        return None
+    for o in parts:
+        for m in o.modifiers:
+            if m.type == "SOLIDIFY":
+                m.show_viewport = False
+    dg = bpy.context.evaluated_depsgraph_get()
+    bm = bmesh.new()
+    for o in parts:
+        me = bpy.data.meshes.new_from_object(o.evaluated_get(dg))
+        me.transform(o.matrix_world)
+        bm.from_mesh(me)
+        bpy.data.meshes.remove(me)
+    zs = [v.co for v in bm.verts]
+    height = max(max(c[i] for c in zs) - min(c[i] for c in zs) for i in range(3))
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=height * 0.0003)
+    # Close eye openings and nostrils; leave anything large alone.
+    boundary = [e for e in bm.edges if e.is_boundary]
+    bmesh.ops.holes_fill(bm, edges=boundary, sides=80)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    mesh = bpy.data.meshes.new("SkinSurface")
+    bm.to_mesh(mesh)
+    bm.free()
+    for p in mesh.polygons:
+        p.use_smooth = True
+    skin = bpy.data.objects.new("Skin", mesh)
+    bpy.context.scene.collection.objects.link(skin)
+    # One level of smoothing: rounder shapes, and finer triangles so pain-area edges are smooth.
+    skin.modifiers.new("skin_smooth", "SUBSURF").levels = 1
+    bake([skin])
+    return skin
 
 
 def wrap_skin(objs):
@@ -204,6 +247,33 @@ def drop_off_body(kept):
     return inside, [o.name + " (off body)" for o, _ in outside]
 
 
+def bake(objs):
+    """Each object's evaluated mesh (modifiers applied) becomes its own unparented, plain mesh."""
+    dg = bpy.context.evaluated_depsgraph_get()
+    baked = []
+    for o in objs:
+        me = bpy.data.meshes.new_from_object(o.evaluated_get(dg))
+        baked.append((o, me, o.matrix_world.copy()))
+    for o, me, world in baked:
+        o.modifiers.clear()
+        if o.data.shape_keys:
+            o.shape_key_clear()
+        o.data = me
+        o.parent = None
+        o.matrix_world = world
+
+
+def decimate(objs, ratio):
+    """Collapse-decimate many objects at once: one depsgraph evaluation for all of them."""
+    for o in objs:
+        o.modifiers.new("skeleton_decimate", "DECIMATE").ratio = max(ratio, 0.02)
+    dg = bpy.context.evaluated_depsgraph_get()
+    done = [(o, bpy.data.meshes.new_from_object(o.evaluated_get(dg))) for o in objs]
+    for o, me in done:
+        o.modifiers.clear()
+        o.data = me
+
+
 def make_editable(o):
     """Shape keys block applying modifiers; drop them (we only need the rest pose)."""
     if o.data.users > 1:
@@ -231,7 +301,9 @@ def main():
     mid_x = (min(xs) + max(xs)) / 2 if xs else 0
 
     # The atlas's own skin matches its insides exactly, so bring it too (layer "skin").
-    skin = pick_skin(meshes)
+    # Z-Anatomy keeps it as body-surface patches in its "Regions of human body" collection.
+    region_skin = skin_from_surface_regions()
+    skin = [region_skin] if region_skin else pick_skin(meshes)
     meshes = [o for o in meshes if o not in skin]
     (out / "anatomy-objects.txt").write_text("\n".join(sorted(o.name for o in meshes + skin)) + "\n")
 
@@ -252,26 +324,23 @@ def main():
 
     kept, off_body = drop_off_body(kept)
     skipped += off_body
-    kept_names = {k[0].name for k in kept}
-    for o in meshes:
-        if o.name not in kept_names:
-            bpy.data.objects.remove(o, do_unlink=True)
 
-    # Reduce detail to the budget, proportionally per object.
+    # Bake every kept part to a plain, flat mesh (its modifiers applied, e.g. a mirrored side),
+    # then clear out everything else. Atlas files hold thousands of labels, curves and helpers;
+    # removing them first makes the rest of the work fast, and labels parented to structures
+    # can't ride along into the export.
+    bake([o for o, _ in kept] + skin)
+    keep = {o.name for o, _ in kept} | {o.name for o in skin}
+    bpy.data.batch_remove([o for o in bpy.data.objects if o.name not in keep])
+
+    # Reduce detail to the budget, proportionally per object, in one pass.
     before = sum(triangles(o) for o, _ in kept)
     ratio = min(1.0, a.budget / max(before, 1))
-    if bpy.context.object and bpy.context.object.mode != "OBJECT":
-        bpy.ops.object.mode_set(mode="OBJECT")
     if ratio < 1:
-        for o, _ in kept:
-            make_editable(o)
-            m = o.modifiers.new("skeleton_decimate", "DECIMATE")
-            m.ratio = max(ratio, 0.02)
-            bpy.context.view_layer.objects.active = o
-            bpy.ops.object.modifier_apply(modifier=m.name)
+        decimate([o for o, _ in kept], ratio)
     after = sum(triangles(o) for o, _ in kept)
 
-    # No skin in the file (Z-Anatomy has none): wrap one tightly around the muscles and bones.
+    # No skin in the file: wrap one tightly around the muscles and bones.
     if not skin:
         wrapped = wrap_skin([o for o, info in kept if info["layer"] in ("muscles", "bones", "tendons")])
         if wrapped:
@@ -280,25 +349,9 @@ def main():
     # Skin has its own budget: smooth enough to look good, light enough to tap-test.
     skin_before = sum(triangles(o) for o in skin)
     skin_ratio = min(1.0, SKIN_BUDGET / max(skin_before, 1))
-    for o in skin:
-        make_editable(o)
-        if skin_ratio < 1:
-            m = o.modifiers.new("skeleton_decimate", "DECIMATE")
-            m.ratio = max(skin_ratio, 0.02)
-            bpy.context.view_layer.objects.active = o
-            bpy.ops.object.modifier_apply(modifier=m.name)
+    if skin_ratio < 1:
+        decimate(skin, skin_ratio)
     kept += [(o, {"id": "skin", "layer": "skin", "name": "Skin"}) for o in skin]
-
-    # Export only what we kept, flat: atlas labels, leader lines and empties are often parented
-    # to structures and would otherwise ride along inside them.
-    keep = {o.name for o, _ in kept}
-    for o, _ in kept:
-        world = o.matrix_world.copy()
-        o.parent = None
-        o.matrix_world = world
-    for o in list(bpy.context.scene.objects):
-        if o.name not in keep:
-            bpy.data.objects.remove(o, do_unlink=True)
 
     # Stable prim names; the manifest carries the meaning.
     manifest = []
@@ -331,7 +384,7 @@ def main():
         f"Kept {len(manifest)} structures ({', '.join(f'{v} {k}' for k, v in sorted(by_layer.items()))}); left out {len(skipped)}.",
         f"Triangles: {before:,} → {after:,} (budget {a.budget:,}).",
         f"Pathway structures found: {len(need) - len(missing)}/{len(need)}.",
-        (f"Skin: {', '.join(o.name for o in skin)} ({skin_before:,} → {sum(triangles(o) for o in skin):,} triangles)."
+        (f"Skin: found ({skin_before:,} → {sum(triangles(o) for o in skin):,} triangles)."
          if skin else "Skin: none; the app keeps its own skin."),
     ]
     if missing:

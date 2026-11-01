@@ -107,7 +107,12 @@ public struct StockBody: Sendable {
                 let i = grid.nearest(to: morph.invert(c), maxDistance: 0.25)
                 regions.append(i.flatMap { $0 < stockRegions.count ? stockRegions[$0] : nil })
             }
-            skinTriangleRegions = Self.smoothed(regions, mesh: merged)
+            var smoothed = Self.smoothed(regions, mesh: merged)
+            // An area the copy missed (bodies posed slightly differently, e.g. the front of the
+            // upper arm) grows from its anchor over the new skin, so every area exists.
+            Self.growMissing(&smoothed, mesh: merged, centroids: centroids, regions: atlas.regions,
+                             scale: morph.heightScale) { id in atlasMapper.anchor(of: id).map { morph.apply($0) } }
+            skinTriangleRegions = smoothed
         } else {
             // No matching table (e.g. a new scan): map each triangle like a tap would.
             var regions: [String?] = []
@@ -176,7 +181,8 @@ public struct StockBody: Sendable {
 
     /// Cleans up speckles after an area transfer: a triangle whose neighbours mostly agree on
     /// another area joins it.
-    static func smoothed(_ input: [String?], mesh: MeshData, passes: Int = 2) -> [String?] {
+    /// Triangles sharing an edge with each triangle.
+    static func triangleNeighbours(_ mesh: MeshData) -> [[Int]] {
         var edgeTris: [UInt64: [Int]] = [:]
         let triCount = mesh.indices.count / 3
         for t in 0..<triCount {
@@ -190,6 +196,45 @@ public struct StockBody: Sendable {
             neighbours[tris[0]].append(tris[1])
             neighbours[tris[1]].append(tris[0])
         }
+        return neighbours
+    }
+
+    /// Gives every atlas region with no triangles a patch: grown over the surface from the skin
+    /// triangle nearest its anchor, out to the region's radius.
+    static func growMissing(_ regions: inout [String?], mesh: MeshData, centroids: [Vec3], regions atlasRegions: [BodyRegion],
+                            scale: Float, anchor: (String) -> Vec3?) {
+        let present = Set(regions.compactMap { $0 })
+        let missing = atlasRegions.filter { !present.contains($0.id) }
+        guard !missing.isEmpty, !centroids.isEmpty else { return }
+        let neighbours = triangleNeighbours(mesh)
+        for region in missing {
+            guard let a = anchor(region.id) else { continue }
+            var seed = 0
+            var best = Float.infinity
+            for (i, c) in centroids.enumerated() {
+                let d = (c - a).dotted(c - a)
+                if d < best { best = d; seed = i }
+            }
+            let origin = centroids[seed]
+            let limit = region.radius * scale
+            var stack = [seed]
+            var seen: Set<Int> = [seed]
+            while let t = stack.popLast() {
+                if t < regions.count { regions[t] = region.id }
+                for n in neighbours[t] where !seen.contains(n) {
+                    let d = centroids[n] - origin
+                    if d.dotted(d) <= limit * limit {
+                        seen.insert(n)
+                        stack.append(n)
+                    }
+                }
+            }
+        }
+    }
+
+    static func smoothed(_ input: [String?], mesh: MeshData, passes: Int = 2) -> [String?] {
+        let neighbours = triangleNeighbours(mesh)
+        let triCount = neighbours.count
         var regions = input
         for _ in 0..<passes {
             var next = regions
