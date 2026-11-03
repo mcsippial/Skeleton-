@@ -288,12 +288,54 @@ struct BodyScreen: View {
         }
     }
 
+    /// One connection: the other pain, how it links, and the glowing strands that carry it.
+    private func connectionRow(_ c: BodyViewModel.Connection) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Image(systemName: "arrow.triangle.branch").font(.system(size: 12, weight: .bold))
+                Text(model.regionName(c.otherRegionID)).font(.system(size: 15, weight: .semibold))
+            }
+            Text(c.explanation).font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
+            if !c.strands.isEmpty {
+                FlowLayout(spacing: 6) {
+                    ForEach(c.strands) { strand in
+                        HStack(spacing: 5) {
+                            Circle().fill(strandColor(strand.layer)).frame(width: 7, height: 7)
+                            Text(strand.name).font(.system(size: 12, weight: .medium))
+                        }
+                        .padding(.horizontal, 9).padding(.vertical, 5)
+                        .background(Capsule().fill(Color.white.opacity(0.85)))
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color(hex: 0xFFF1EC)))
+    }
+
+    private func strandColor(_ layer: AnatomyLayer) -> Color {
+        switch layer {
+        case .nerves: Color(hex: 0xF2B630)
+        case .muscles: Color(hex: 0xC24F45)
+        case .tendons: Color(hex: 0xB9AE98)
+        case .bones: Color(hex: 0xD8CBB0)
+        case .skin: Color(hex: 0xDEDEE4)
+        }
+    }
+
     private func historyCard(_ region: String) -> some View {
         let list = model.entries(inRegion: region)
         return GlassCard(label: "History · \(list.count) \(list.count == 1 ? "entry" : "entries")") {
             Text(model.regionName(region))
                 .font(.system(size: 17, weight: .semibold))
                 .tracking(-0.2)
+            let connections = model.spotConnections
+            if !connections.isEmpty {
+                SectionLabel("Connected to").padding(.top, 6)
+                ForEach(connections) { c in connectionRow(c) }
+                SectionLabel("Entries").padding(.top, 8)
+            }
             ForEach(list) { e in
                 Button { model.show(.pain(e.id)) } label: {
                 HStack(alignment: .top, spacing: 10) {

@@ -66,7 +66,8 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [ ] Sync daily metrics to `health_metrics` and record the connection in `integrations`
 
 ## Features (Nov 2026)
-- [x] Body overview: current pains as a network (pains ↔ shared pathways), what it may mean, health patterns, one combined plan (`BodyOverview`, rules only)
+- [x] Pain connections on the 3D body: tap a pain area → skin peels back, the connecting muscles and nerves glow, lines run to connected pains, the drawer names each strand
+- [x] Body overview page: every current pain (opens it on the body), what the connections may mean, health patterns, one combined plan (`BodyOverview`, rules only)
 - [ ] Trends & charts per pain area, with health metrics aligned
 - [ ] Stretch library with a 3D figure demonstrating each stretch
 - [ ] Ask Skeleton: chat grounded in your history (Edge Function, same safety rules)

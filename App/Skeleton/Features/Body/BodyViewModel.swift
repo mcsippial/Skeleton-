@@ -229,13 +229,72 @@ final class BodyViewModel {
     }
     var highlight: Highlight { Highlight(selected: flashID, glowing: glowingStructures) }
 
+    // MARK: Connections ("strands")
+
+    /// One connection from the selected pain area to another current pain, and the real
+    /// structures (muscles, nerves, joints) that carry it.
+    struct Connection: Identifiable {
+        struct Strand: Identifiable, Hashable { let id: String; let name: String; let layer: AnatomyLayer }
+        var id: String { "\(otherRegionID)|\(pathwayID)" }
+        let otherRegionID: String
+        let pathwayID: String
+        let pathwayName: String
+        let explanation: String
+        let strands: [Strand]
+    }
+
+    /// Structure names and layers by ID (for naming strands).
+    @ObservationIgnored private var structureIndexCache: [String: (name: String, layer: AnatomyLayer)]?
+    private var structureIndex: [String: (name: String, layer: AnatomyLayer)] {
+        if let c = structureIndexCache { return c }
+        guard let body = stockBody else { return [:] }
+        let index = Dictionary(body.structures.map { ($0.id, (name: $0.name, layer: $0.layer)) }, uniquingKeysWith: { a, _ in a })
+        structureIndexCache = index
+        return index
+    }
+
+    /// Connections from the tapped pain area, strongest first.
+    var spotConnections: [Connection] {
+        guard let spot = selectedSpot else { return [] }
+        var out: [Connection] = []
+        var seen = Set<String>()
+        for arc in shownArcs {
+            let other = arc.fromRegionID == spot ? arc.toRegionID : arc.fromRegionID
+            guard other != spot, seen.insert("\(other)|\(arc.pathwayID)").inserted,
+                  let p = data.pathways.pathway(arc.pathwayID) else { continue }
+            let strands = p.structures(for: arc.side).compactMap { id in
+                structureIndex[id].map { Connection.Strand(id: id, name: $0.name, layer: $0.layer) }
+            }
+            out.append(Connection(otherRegionID: other, pathwayID: p.id, pathwayName: p.name,
+                                  explanation: p.plainExplanation.firstSentences(1), strands: strands))
+        }
+        return out
+    }
+
+    /// True while a pain area with connections is open: the body shows its insides.
+    var isShowingConnections: Bool { selectedSpot != nil && !glowingStructures.isEmpty }
+
+    private var strandLayers: Set<AnatomyLayer> {
+        Set(glowingStructures.compactMap { structureIndex[$0]?.layer }).subtracting([.skin])
+    }
+
+    /// From elsewhere in the app: open the Body tab on a pain area with its connections showing.
+    func showConnections(of region: String) {
+        requestedTab = .body
+        selection = nil
+        selectedEpisode = nil
+        selectedSpot = region
+        if let p = stockBody?.anchor(ofRegion: region) { setCamera(.focusing(p, distance: 2.2), animated: true) }
+    }
+
     /// Structures along the shown links glow.
     private var glowingStructures: Set<String> {
         var ids = Set<String>()
         for arc in shownArcs {
             if let p = data.pathways.pathway(arc.pathwayID) { ids.formUnion(p.structures(for: arc.side)) }
         }
-        return ids
+        let known = structureIndex
+        return ids.filter { known[$0] != nil }
     }
 
     private var arcRenders: [BodySceneController.ArcRender] {
@@ -470,6 +529,14 @@ final class BodyViewModel {
     }
 
     var sceneState: BodySceneController.State {
+        // Showing how a pain connects: the skin comes off and the layers holding the connecting
+        // strands come on, without changing the user's own layer choice.
+        if isShowingConnections {
+            let layers = visibleLayers.subtracting([.skin]).union(strandLayers)
+            return .init(visibleLayers: layers, skinOpacity: 0, flashID: flashID,
+                         camera: camera, cameraRevision: cameraRevision, cameraAnimated: cameraAnimated,
+                         spots: spotRenders, arcs: arcRenders, glowIDs: glowingStructures)
+        }
         // With solid skin the inner layers can't be seen; hiding them avoids poke-through and saves work.
         let solidSkin = skinOpacity >= 0.92 && visibleLayers.contains(.skin)
         return .init(visibleLayers: solidSkin ? [.skin] : visibleLayers, skinOpacity: Float(skinOpacity), flashID: flashID,
