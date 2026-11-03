@@ -43,3 +43,18 @@ final class HealthTests: XCTestCase {
         XCTAssertEqual(insight.droppedCount, 0)
     }
 }
+
+final class WearableTests: XCTestCase {
+    func testIdentifiesWearablesFromHealthSources() {
+        XCTAssertEqual(Wearable.identify(bundleID: "com.ouraring.oura", name: "Oura"), .oura)
+        XCTAssertEqual(Wearable.identify(bundleID: "com.whoop.iphone", name: "WHOOP"), .whoop)
+        XCTAssertEqual(Wearable.identify(bundleID: "com.garmin.connect.mobile", name: "Connect"), .garmin)
+        XCTAssertEqual(Wearable.identify(bundleID: "com.apple.health.81C3D8E2", name: "Mac’s Apple Watch"), .appleWatch)
+        XCTAssertNil(Wearable.identify(bundleID: "com.apple.Health", name: "Health"))
+        XCTAssertNil(Wearable.identify(bundleID: "com.example.scale", name: "Smart Scale"))
+    }
+
+    func testEveryWearableHasSyncSteps() {
+        for w in Wearable.allCases { XCTAssertFalse(w.syncSteps.isEmpty, w.name) }
+    }
+}

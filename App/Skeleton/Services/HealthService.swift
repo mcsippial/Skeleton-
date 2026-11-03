@@ -2,13 +2,15 @@ import Foundation
 import HealthKit
 import SkeletonCore
 
-/// Daily health metrics. Apple Health directly via HealthKit; wearables (Oura, WHOOP, Garmin,
-/// Fitbit) come later through Terra or Junction behind the same protocol.
+/// Daily health metrics from Apple Health via HealthKit. Wearables (Oura, WHOOP, Garmin, Apple
+/// Watch) reach Skeleton by writing to Apple Health; `sources()` says which ones do.
 protocol HealthService: Sendable {
     var sourceName: String { get }
     var isAvailable: Bool { get }
     func requestAccess() async throws
     func dailyMetrics(from start: Date, to end: Date) async throws -> [DailyMetric]
+    /// The apps and devices that wrote the data Skeleton reads (last 30 days).
+    func sources() async throws -> [HealthSource]
 }
 
 /// Demo data shaped around the pain history (short sleep and low HRV before flares).
@@ -19,6 +21,10 @@ struct MockHealthService: HealthService {
     func requestAccess() async throws {}
     func dailyMetrics(from start: Date, to end: Date) async throws -> [DailyMetric] {
         DemoHealth.metrics(now: end, entries: await entries()).filter { $0.day >= start }
+    }
+    func sources() async throws -> [HealthSource] {
+        [HealthSource(name: "Oura", bundleID: "com.ouraring.oura", kinds: [.sleepHours, .hrv, .restingHeartRate]),
+         HealthSource(name: "Apple Watch", bundleID: "com.apple.health.demo-watch", kinds: [.steps, .workoutMinutes, .restingHeartRate])]
     }
 }
 
@@ -88,5 +94,21 @@ final class HealthKitService: HealthService, @unchecked Sendable {
         }
         out += minutesByDay.map { DailyMetric(kind: .workoutMinutes, day: $0.key, value: $0.value) }
         return out
+    }
+
+    func sources() async throws -> [HealthSource] {
+        let since = HKQuery.predicateForSamples(withStart: Calendar.current.date(byAdding: .day, value: -30, to: Date()), end: nil)
+        var found: [String: HealthSource] = [:]
+        func add<S: Sequence>(_ sources: S, _ kind: HealthMetricKind) where S.Element == HKSource {
+            for s in sources {
+                found[s.bundleIdentifier, default: HealthSource(name: s.name, bundleID: s.bundleIdentifier, kinds: [])].kinds.insert(kind)
+            }
+        }
+        for (type, kind, _, _) in quantityTypes {
+            add(try await HKSourceQueryDescriptor(predicate: .quantitySample(type: type, predicate: since)).result(for: store), kind)
+        }
+        add(try await HKSourceQueryDescriptor(predicate: .categorySample(type: HKCategoryType(.sleepAnalysis), predicate: since)).result(for: store), .sleepHours)
+        add(try await HKSourceQueryDescriptor(predicate: .workout(since)).result(for: store), .workoutMinutes)
+        return found.values.sorted { $0.kinds.count > $1.kinds.count }
     }
 }

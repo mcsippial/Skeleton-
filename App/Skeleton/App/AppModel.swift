@@ -20,6 +20,8 @@ final class AppModel {
     let reportLinks: (any ReportLinkService)?
     /// Apple Health in live mode; demo health data in demo mode.
     let health: any HealthService
+    /// Direct wearable connections (aggregator not chosen yet: none in live mode, mock in demo).
+    let wearables: any WearableConnector
     let data: SkeletonData
 
     private(set) var user: AppUser?
@@ -51,7 +53,9 @@ final class AppModel {
             parser = EdgeTextPainParser(client: client, atlas: data.atlas, fallback: MockTextPainParser(atlas: data.atlas))
             reportLinks = SupabaseReportLinkService(client: client)
             health = HealthKitService()
+            wearables = NoWearableConnector()
         } else {
+            wearables = MockWearableConnector()
             reportLinks = nil
             auth = MockAuthService()
             pain = MockPainRepository()
@@ -63,6 +67,7 @@ final class AppModel {
             health = MockHealthService(entries: { (try? await repo.entries()) ?? [] })
         }
         #else
+        wearables = MockWearableConnector()
         reportLinks = nil
         auth = MockAuthService()
         let repo = MockPainRepository()

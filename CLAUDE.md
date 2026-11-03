@@ -25,7 +25,7 @@ It also pulls in data from the user's existing health apps (Apple Health, Oura, 
 | Pain logging | **Both**: tap a spot on the 3D body, *or* say/type it ("sharp pain in my left jaw since Tuesday") and AI places it on the body for the user to confirm. |
 | Cause engine | **Both, with rules checking the AI.** A built-in library of known pain pathways and red flags + Claude reasoning over the user's timeline. Rules validate and constrain AI output. |
 | Accounts | Login + **cloud sync** like a normal health app. **Supabase** (Auth, Postgres, Storage, Edge Functions). |
-| Health integrations | Connect whatever the user already uses. One aggregator: **Terra** or **Junction** (decide in Phase 3; both offer iOS SDKs that cover Apple HealthKit plus Oura, WHOOP, Garmin, Fitbit via cloud). |
+| Health integrations | Connect whatever the user already uses. **For now: Apple Health only** (Oura, WHOOP, Garmin and Apple Watch sync into it); decided Nov 2026 at the owner's request to avoid aggregator fees before there are users. Later: one aggregator, **Terra** or **Junction**, behind `WearableConnector`. |
 | AI | **Anthropic Claude API**, called **only from a Supabase Edge Function**. The API key never ships in the app. |
 | Name | **Skeleton** |
 

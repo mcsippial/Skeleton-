@@ -31,12 +31,24 @@ struct HomeView: View {
                     EpisodesCard(model: model) { model.show(.pattern($0.id)) }
                 }
                 if model.entries.count > 1 { recent }
-                if !model.metricsOnDisplayDate.isEmpty {
+                Button { model.show(.devices) } label: {
                     VStack(alignment: .leading, spacing: 8) {
-                        SectionLabel("Today")
-                        MetricStrip(values: model.metricsOnDisplayDate)
+                        HStack {
+                            SectionLabel("Today")
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(Theme.Color.secondaryText)
+                        }
+                        if model.metricsOnDisplayDate.isEmpty {
+                            Text(model.healthConnected ? "No health data for today yet." : "Connect Apple Health or a wearable")
+                                .font(Theme.Font.callout).foregroundStyle(Theme.Color.secondaryText)
+                        } else {
+                            MetricStrip(values: model.metricsOnDisplayDate)
+                        }
                     }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -94,16 +106,7 @@ struct HomeView: View {
                 Button("Doctor report", systemImage: "doc.text") { makeReport() }
                 Button("Edit profile", systemImage: "person.crop.circle") { showProfile = true }
             }
-            if model.healthConnected {
-                Button("Disconnect \(model.health.sourceName)", systemImage: "heart.slash") {
-                    model.disconnectHealth()
-                    app.setHealthConnected(false, userID: profile.userID)
-                }
-            } else if model.health.isAvailable {
-                Button("Connect Apple Health", systemImage: "heart.text.square") {
-                    Task { if await model.connectHealth() { app.setHealthConnected(true, userID: profile.userID) } }
-                }
-            }
+            Button("Health & devices", systemImage: "heart.text.square") { model.show(.devices) }
             Button("Design system", systemImage: "square.grid.2x2") { showGallery = true }
             Button("Sign out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
                 Task { await app.signOut() }

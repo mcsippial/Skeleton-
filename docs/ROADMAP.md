@@ -59,8 +59,10 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 ## Phase 3 — Health integrations
 - [x] Apple Health directly (HealthKit, read-only): sleep, HRV, resting HR, steps, workouts, weight; demo data in demo mode
 - [x] Metrics on the timeline; fed to the cause engine (`HealthSummary`: before-onset vs usual), shown on the insight card and report
-- [ ] Decide Terra vs. Junction
-- [ ] Aggregator SDK for Oura, WHOOP, Garmin, Fitbit behind `HealthService`
+- [x] Decided (Nov 2026): no paid aggregator yet. Oura, WHOOP, Garmin and Apple Watch reach Skeleton through Apple Health; Terra (~$399+/mo) or Junction (~$300/mo) gets added once there are real users
+- [x] Health & devices page: Apple Health connect/disconnect, devices detected from Apple Health sources, per-device sync steps
+- [x] `WearableConnector` slot for the aggregator (none in live mode, mock in demo mode)
+- [ ] Pick Terra or Junction and implement `WearableConnector` (connect widget, webhook Edge Function)
 - [ ] Sync daily metrics to `health_metrics` and record the connection in `integrations`
 
 ## Phase 4 — The real body
