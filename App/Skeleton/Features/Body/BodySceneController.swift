@@ -256,22 +256,30 @@ final class BodySceneController {
     private static let particleMesh = try? MeshResource.generate(from: [spotDescriptor(radius: 0.007, name: "arc-particle")])
 
     /// A thin red tube along the curve, with small particles moving in the direction pain travelled.
+    /// The trail between connected pains: a bright core line over a soft glow, running over the
+    /// body's surface, with light pulses travelling in the direction the pain moved.
     private static func makeArc(_ arc: ArcRender) -> Entity? {
         guard arc.points.count > 2,
-              let tube = try? meshResource(MeshBuilder.tube(arc.points, radius: 0.0028, samples: 48, radialSegments: 6), name: "arc") else { return nil }
+              let core = try? meshResource(MeshBuilder.tube(arc.points, radius: 0.0035, samples: 96, radialSegments: 8), name: "arc"),
+              let halo = try? meshResource(MeshBuilder.tube(arc.points, radius: 0.011, samples: 96, radialSegments: 10), name: "arc-glow")
+        else { return nil }
         let group = Entity()
         group.name = "arc.\(arc.id)"
-        var lineMaterial = UnlitMaterial(color: UIColor(hex: 0xFF4D3D))
-        lineMaterial.blending = .transparent(opacity: .init(floatLiteral: 0.85))
-        group.addChild(ModelEntity(mesh: tube, materials: [lineMaterial]))
+        var glow = UnlitMaterial(color: UIColor(hex: 0xFF6A3D))
+        glow.blending = .transparent(opacity: .init(floatLiteral: 0.22))
+        group.addChild(ModelEntity(mesh: halo, materials: [glow]))
+        var line = UnlitMaterial(color: UIColor(hex: 0xFF4D2E))
+        line.blending = .transparent(opacity: .init(floatLiteral: 0.95))
+        group.addChild(ModelEntity(mesh: core, materials: [line]))
 
         guard let particleMesh else { return group }
-        // Resample the curve to ~60 frames per pass; three particles offset by a third each.
-        let frames = CatmullRom(points: arc.points).sample(count: 60).map { Transform(translation: $0) }
-        for k in 0..<3 {
+        // Pulses: ~1.6 s per pass, four spaced along the trail.
+        let frames = CatmullRom(points: arc.points).sample(count: 48).map { Transform(translation: $0) }
+        for k in 0..<4 {
             let particle = ModelEntity(mesh: particleMesh, materials: [UnlitMaterial(color: .rgbWhite)])
-            let shift = k * frames.count / 3
-            let rotated = Array(frames[shift...] + frames[..<shift])
+            particle.scale = SIMD3(repeating: 1.5)
+            let shift = k * frames.count / 4
+            let rotated = Array(frames[shift...] + frames[..<shift]).map { var f = $0; f.scale = SIMD3(repeating: 1.5); return f }
             particle.transform = rotated[0]
             let motion = SampledAnimation<Transform>(frames: rotated, frameInterval: 1 / 30,
                                                       bindTarget: .transform, repeatMode: .repeat)

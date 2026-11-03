@@ -95,7 +95,7 @@ public struct BodyOverview: Sendable {
         }
         let hubs: [Hub] = hubAreas.compactMap { id, regionIDs in
             guard let p = data.pathways.pathways.first(where: { $0.id == id }) else { return nil }
-            return Hub(id: id, name: p.name, mechanism: p.mechanism, explanation: p.plainExplanation.firstSentences(2),
+            return Hub(id: id, name: p.displayName, mechanism: p.mechanism, explanation: p.displayExplanation.firstSentences(2),
                        contributors: Array(p.commonContributors.prefix(4)), specialist: p.specialist,
                        areaIDs: regionIDs, isRedFlag: p.alwaysRedFlag)
         }

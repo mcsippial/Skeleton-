@@ -262,11 +262,14 @@ final class BodyViewModel {
             let other = arc.fromRegionID == spot ? arc.toRegionID : arc.fromRegionID
             guard other != spot, seen.insert("\(other)|\(arc.pathwayID)").inserted,
                   let p = data.pathways.pathway(arc.pathwayID) else { continue }
-            let strands = p.structures(for: arc.side).compactMap { id in
-                structureIndex[id].map { Connection.Strand(id: id, name: $0.name, layer: $0.layer) }
+            var names = Set<String>()
+            let strands = p.structures(for: arc.side).compactMap { id -> Connection.Strand? in
+                guard let s = structureIndex[id] else { return nil }
+                let name = PlainNames.structure(id) ?? s.name
+                return names.insert(name).inserted ? Connection.Strand(id: id, name: name, layer: s.layer) : nil
             }
-            out.append(Connection(otherRegionID: other, pathwayID: p.id, pathwayName: p.name,
-                                  explanation: p.plainExplanation.firstSentences(1), strands: strands))
+            out.append(Connection(otherRegionID: other, pathwayID: p.id, pathwayName: p.displayName,
+                                  explanation: p.displayExplanation.firstSentences(1), strands: strands))
         }
         return out
     }
@@ -284,7 +287,36 @@ final class BodyViewModel {
         selection = nil
         selectedEpisode = nil
         selectedSpot = region
-        if let p = stockBody?.anchor(ofRegion: region) { setCamera(.focusing(p, distance: 2.2), animated: true) }
+        frameConnections(of: region)
+    }
+
+    /// Glides the camera so the pain and everything it connects to fit in the space above the
+    /// (collapsed) drawer, facing whichever side most of them are on.
+    private func frameConnections(of region: String) {
+        guard let body = stockBody else { return }
+        let others = spotConnections.map(\.otherRegionID)
+        let points = ([region] + others).compactMap { body.anchor(ofRegion: $0) }
+        guard !points.isEmpty else { return }
+        var lo = points[0], hi = points[0]
+        for p in points {
+            lo = Vec3(min(lo.x, p.x), min(lo.y, p.y), min(lo.z, p.z))
+            hi = Vec3(max(hi.x, p.x), max(hi.y, p.y), max(hi.z, p.z))
+        }
+        let centre = (lo + hi) * 0.5
+        let span = max(hi.y - lo.y, hi.x - lo.x, 0.25)
+        // Front if they're all on the front (+Z), back if all on the back; a mix (e.g. lower back
+        // → groin) is shown from the side they're on, so the trail around the body is visible.
+        let zs = points.map(\.z)
+        let yaw: Float
+        if zs.allSatisfy({ $0 >= 0 }) { yaw = 0 }
+        else if zs.allSatisfy({ $0 < 0 }) { yaw = .pi }
+        else { yaw = points.map(\.x).reduce(0, +) >= 0 ? .pi / 2 : -.pi / 2 }
+        var c = camera
+        c.target = Vec3(centre.x, centre.y - span * 0.18, centre.z)
+        c.yaw = yaw
+        c.pitch = 0.05
+        c.distance = min(max(span * 2.6, 1.3), 3.4)
+        setCamera(c, animated: true)
     }
 
     /// Structures along the shown links glow.
@@ -301,7 +333,7 @@ final class BodyViewModel {
         guard let body = stockBody else { return [] }
         return shownArcs.compactMap { arc in
             guard let a = body.anchor(ofRegion: arc.fromRegionID), let b = body.anchor(ofRegion: arc.toRegionID) else { return nil }
-            return .init(id: arc.id, points: FlowArc.curve(from: a, to: b))
+            return .init(id: arc.id, points: body.surfaceTrail(from: a, to: b))
         }
     }
 
@@ -813,6 +845,7 @@ final class BodyViewModel {
             selectedEpisode = nil
             selection = nil
             tooltip = nil
+            frameConnections(of: spot)
             return
         }
 

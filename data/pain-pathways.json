@@ -27,198 +27,607 @@
     {
       "id": "lumbar_to_leg_sciatic",
       "name": "Lower back → buttock / back of leg",
-      "from_regions": ["lumbar_l", "lumbar_r", "si_joint_l", "si_joint_r"],
-      "to_regions": ["buttock_l", "buttock_r", "thigh_post_l", "thigh_post_r", "knee_post_l", "knee_post_r", "calf_l", "calf_r", "heel_l", "heel_r", "plantar_foot_l", "plantar_foot_r", "foot_dorsum_l", "foot_dorsum_r"],
+      "short_name": "Lower back → leg (sciatic nerve)",
+      "from_regions": [
+        "lumbar_l",
+        "lumbar_r",
+        "si_joint_l",
+        "si_joint_r"
+      ],
+      "to_regions": [
+        "buttock_l",
+        "buttock_r",
+        "thigh_post_l",
+        "thigh_post_r",
+        "knee_post_l",
+        "knee_post_r",
+        "calf_l",
+        "calf_r",
+        "heel_l",
+        "heel_r",
+        "plantar_foot_l",
+        "plantar_foot_r",
+        "foot_dorsum_l",
+        "foot_dorsum_r"
+      ],
       "bidirectional": false,
       "side_rule": "same_side",
       "mechanism": "radiating",
       "plain_explanation": "The sciatic nerve is formed from nerve roots in your lower back and runs through the buttock and down the back of the leg. Irritation near the spine is often felt further down the nerve.",
-      "common_contributors": ["Lumbar disc irritation", "Spinal joint stiffness", "Tight piriformis / glutes", "Long periods of sitting", "Heavy or repeated lifting"],
-      "linked_structures": ["sciatic_{s}", "glute_{s}", "ham_{s}", "erector_{s}"],
-      "red_flag_ids": ["cauda_equina", "new_neuro_deficit", "back_pain_systemic"],
+      "simple_explanation": "A pinched or irritated nerve in your lower back can send pain down into your buttock and the back of your leg.",
+      "common_contributors": [
+        "Lumbar disc irritation",
+        "Spinal joint stiffness",
+        "Tight piriformis / glutes",
+        "Long periods of sitting",
+        "Heavy or repeated lifting"
+      ],
+      "linked_structures": [
+        "sciatic_{s}",
+        "glute_{s}",
+        "ham_{s}",
+        "erector_{s}"
+      ],
+      "red_flag_ids": [
+        "cauda_equina",
+        "new_neuro_deficit",
+        "back_pain_systemic"
+      ],
       "specialist": "Physical therapist or sports-medicine / spine doctor",
-      "sources": ["sciatica"]
+      "sources": [
+        "sciatica"
+      ]
     },
     {
       "id": "lumbar_si_to_groin",
       "name": "Lower back / SI joint → groin",
-      "from_regions": ["lumbar_l", "lumbar_r", "si_joint_l", "si_joint_r"],
-      "to_regions": ["groin_l", "groin_r", "hip_ant_l", "hip_ant_r", "thigh_med_l", "thigh_med_r", "thigh_ant_l", "thigh_ant_r"],
+      "short_name": "Lower back → groin",
+      "from_regions": [
+        "lumbar_l",
+        "lumbar_r",
+        "si_joint_l",
+        "si_joint_r"
+      ],
+      "to_regions": [
+        "groin_l",
+        "groin_r",
+        "hip_ant_l",
+        "hip_ant_r",
+        "thigh_med_l",
+        "thigh_med_r",
+        "thigh_ant_l",
+        "thigh_ant_r"
+      ],
       "bidirectional": false,
       "side_rule": "same_side",
       "mechanism": "referred",
       "plain_explanation": "Nerves that leave the upper lumbar spine (ilioinguinal, genitofemoral, femoral) supply the groin and front of the thigh, and the psoas muscle connects the lumbar spine to the inner hip. The SI joint also commonly refers pain to the groin.",
-      "common_contributors": ["Lumbar disc or spinal joint irritation", "SI joint strain", "Tight or overloaded psoas / hip flexors", "Hinge lifts such as deadlifts", "Long periods of sitting"],
-      "linked_structures": ["psoas_{s}", "groinnerve_{s}", "femoral_{s}", "inguinal_{s}", "si_{s}", "hip_{s}"],
-      "red_flag_ids": ["cauda_equina", "back_pain_systemic", "abdominal_or_testicular"],
+      "simple_explanation": "Nerves and a deep hip muscle run from your lower back to your groin, so a back problem can be felt in the groin.",
+      "common_contributors": [
+        "Lumbar disc or spinal joint irritation",
+        "SI joint strain",
+        "Tight or overloaded psoas / hip flexors",
+        "Hinge lifts such as deadlifts",
+        "Long periods of sitting"
+      ],
+      "linked_structures": [
+        "psoas_{s}",
+        "groinnerve_{s}",
+        "femoral_{s}",
+        "inguinal_{s}",
+        "si_{s}",
+        "hip_{s}"
+      ],
+      "red_flag_ids": [
+        "cauda_equina",
+        "back_pain_systemic",
+        "abdominal_or_testicular"
+      ],
       "specialist": "Physical therapist or sports-medicine doctor",
-      "sources": ["si_joint", "referred_pain_review"]
+      "sources": [
+        "si_joint",
+        "referred_pain_review"
+      ]
     },
     {
       "id": "hip_to_groin_thigh_knee",
       "name": "Hip joint → groin, front of thigh, knee",
-      "from_regions": ["hip_ant_l", "hip_ant_r", "hip_lat_l", "hip_lat_r", "buttock_l", "buttock_r"],
-      "to_regions": ["groin_l", "groin_r", "thigh_ant_l", "thigh_ant_r", "thigh_med_l", "thigh_med_r", "knee_ant_l", "knee_ant_r", "knee_med_l", "knee_med_r"],
+      "short_name": "Hip → groin, thigh and knee",
+      "from_regions": [
+        "hip_ant_l",
+        "hip_ant_r",
+        "hip_lat_l",
+        "hip_lat_r",
+        "buttock_l",
+        "buttock_r"
+      ],
+      "to_regions": [
+        "groin_l",
+        "groin_r",
+        "thigh_ant_l",
+        "thigh_ant_r",
+        "thigh_med_l",
+        "thigh_med_r",
+        "knee_ant_l",
+        "knee_ant_r",
+        "knee_med_l",
+        "knee_med_r"
+      ],
       "bidirectional": false,
       "side_rule": "same_side",
       "mechanism": "referred",
       "plain_explanation": "The hip joint shares nerve supply (obturator and femoral nerves) with the groin, front of the thigh and the knee, so hip problems are often felt lower down, sometimes only at the knee.",
-      "common_contributors": ["Hip joint irritation or early wear", "Hip impingement", "Tight hip flexors", "Running or pivoting sports"],
-      "linked_structures": ["hip_{s}", "femoral_{s}", "add_{s}", "quad_{s}"],
-      "red_flag_ids": ["trauma", "progressive_or_night"],
+      "simple_explanation": "The hip joint shares nerves with the groin, front of the thigh and knee, so hip problems are often felt there instead.",
+      "common_contributors": [
+        "Hip joint irritation or early wear",
+        "Hip impingement",
+        "Tight hip flexors",
+        "Running or pivoting sports"
+      ],
+      "linked_structures": [
+        "hip_{s}",
+        "femoral_{s}",
+        "add_{s}",
+        "quad_{s}"
+      ],
+      "red_flag_ids": [
+        "trauma",
+        "progressive_or_night"
+      ],
       "specialist": "Sports-medicine doctor, orthopaedist or physical therapist",
-      "sources": ["hip_referral"]
+      "sources": [
+        "hip_referral"
+      ]
     },
     {
       "id": "kidney_flank_groin",
       "name": "Kidney → flank → groin",
-      "from_regions": ["flank_l", "flank_r", "lumbar_l", "lumbar_r"],
-      "to_regions": ["groin_l", "groin_r", "abd_lower_l", "abd_lower_r", "suprapubic", "thigh_med_l", "thigh_med_r"],
+      "short_name": "Kidney → side and groin",
+      "from_regions": [
+        "flank_l",
+        "flank_r",
+        "lumbar_l",
+        "lumbar_r"
+      ],
+      "to_regions": [
+        "groin_l",
+        "groin_r",
+        "abd_lower_l",
+        "abd_lower_r",
+        "suprapubic",
+        "thigh_med_l",
+        "thigh_med_r"
+      ],
       "bidirectional": false,
       "side_rule": "same_side",
       "mechanism": "visceral",
       "plain_explanation": "Pain from the kidney or ureter (for example a kidney stone) is felt in the flank and often travels down toward the groin as the problem moves. Fever or urinary symptoms with this pattern need prompt medical care.",
-      "common_contributors": ["Kidney stone", "Kidney or urinary infection", "Dehydration"],
-      "linked_structures": ["groinnerve_{s}"],
-      "red_flag_ids": ["back_pain_systemic", "kidney_urinary", "abdominal_or_testicular"],
+      "simple_explanation": "Kidney problems can be felt in your side and down into the groin. With a fever or trouble peeing, get checked soon.",
+      "common_contributors": [
+        "Kidney stone",
+        "Kidney or urinary infection",
+        "Dehydration"
+      ],
+      "linked_structures": [
+        "groinnerve_{s}"
+      ],
+      "red_flag_ids": [
+        "back_pain_systemic",
+        "kidney_urinary",
+        "abdominal_or_testicular"
+      ],
       "specialist": "GP / urgent care; urologist",
-      "sources": ["visceral_referral"]
+      "sources": [
+        "visceral_referral"
+      ]
     },
     {
       "id": "tmj_neck_ear_temple",
       "name": "Jaw joint (TMJ) ↔ neck, ear, temple",
-      "from_regions": ["tmj_l", "tmj_r", "jaw_l", "jaw_r"],
-      "to_regions": ["neck_lat_l", "neck_lat_r", "neck_post_l", "neck_post_r", "ear_l", "ear_r", "temple_l", "temple_r", "occiput_l", "occiput_r", "trapezius_upper_l", "trapezius_upper_r"],
+      "short_name": "Jaw ↔ neck, ear and temple",
+      "from_regions": [
+        "tmj_l",
+        "tmj_r",
+        "jaw_l",
+        "jaw_r"
+      ],
+      "to_regions": [
+        "neck_lat_l",
+        "neck_lat_r",
+        "neck_post_l",
+        "neck_post_r",
+        "ear_l",
+        "ear_r",
+        "temple_l",
+        "temple_r",
+        "occiput_l",
+        "occiput_r",
+        "trapezius_upper_l",
+        "trapezius_upper_r"
+      ],
       "bidirectional": true,
       "side_rule": "same_side",
       "mechanism": "muscle_chain",
       "plain_explanation": "Your jaw muscle (masseter), temple muscle (temporalis) and the neck muscles that attach just behind your ear work as one chain. Clenching or a forward-head posture loads all of them, so pain often travels between the jaw, ear, temple and neck.",
-      "common_contributors": ["Clenching or grinding, often at night or during heavy lifts", "Jaw joint (TMJ) irritation", "Forward-head posture / long screen time", "Stress and short sleep"],
-      "linked_structures": ["masseter_{s}", "temporalis_{s}", "tmj_{s}", "tmjlig_{s}", "scm_{s}", "neckext_{s}", "trigeminal_{s}", "occipital_{s}"],
-      "red_flag_ids": ["cardiac", "headache_emergency"],
+      "simple_explanation": "Your jaw joint, chewing muscles and neck muscles work together, so jaw tension often spreads to the neck, ear or temple.",
+      "common_contributors": [
+        "Clenching or grinding, often at night or during heavy lifts",
+        "Jaw joint (TMJ) irritation",
+        "Forward-head posture / long screen time",
+        "Stress and short sleep"
+      ],
+      "linked_structures": [
+        "masseter_{s}",
+        "temporalis_{s}",
+        "tmj_{s}",
+        "tmjlig_{s}",
+        "scm_{s}",
+        "neckext_{s}",
+        "trigeminal_{s}",
+        "occipital_{s}"
+      ],
+      "red_flag_ids": [
+        "cardiac",
+        "headache_emergency"
+      ],
       "specialist": "Dentist (clenching / TMJ) or physical therapist",
-      "sources": ["tmd", "travell_simons"]
+      "sources": [
+        "tmd",
+        "travell_simons"
+      ]
     },
     {
       "id": "cervical_to_arm",
       "name": "Neck → shoulder, arm, hand",
-      "from_regions": ["neck_post_l", "neck_post_r", "neck_lat_l", "neck_lat_r"],
-      "to_regions": ["trapezius_upper_l", "trapezius_upper_r", "scapula_l", "scapula_r", "shoulder_lat_l", "shoulder_lat_r", "upper_arm_ant_l", "upper_arm_ant_r", "upper_arm_post_l", "upper_arm_post_r", "forearm_ant_l", "forearm_ant_r", "forearm_post_l", "forearm_post_r", "hand_l", "hand_r", "fingers_l", "fingers_r"],
+      "short_name": "Neck → shoulder, arm and hand",
+      "from_regions": [
+        "neck_post_l",
+        "neck_post_r",
+        "neck_lat_l",
+        "neck_lat_r"
+      ],
+      "to_regions": [
+        "trapezius_upper_l",
+        "trapezius_upper_r",
+        "scapula_l",
+        "scapula_r",
+        "shoulder_lat_l",
+        "shoulder_lat_r",
+        "upper_arm_ant_l",
+        "upper_arm_ant_r",
+        "upper_arm_post_l",
+        "upper_arm_post_r",
+        "forearm_ant_l",
+        "forearm_ant_r",
+        "forearm_post_l",
+        "forearm_post_r",
+        "hand_l",
+        "hand_r",
+        "fingers_l",
+        "fingers_r"
+      ],
       "bidirectional": false,
       "side_rule": "same_side",
       "mechanism": "radiating",
       "plain_explanation": "Nerve roots leaving the neck form the brachial plexus, which supplies the shoulder, arm and hand. Irritation in the neck can be felt anywhere along that path, often with tingling or numbness.",
-      "common_contributors": ["Cervical disc or joint irritation", "Forward-head posture", "Sleeping position", "Long desk or phone sessions"],
-      "linked_structures": ["brachial_{s}", "neckext_{s}", "trap_{s}"],
-      "red_flag_ids": ["new_neuro_deficit", "cardiac"],
+      "simple_explanation": "Nerves leave your neck and run down your arm, so a neck problem can be felt in the shoulder, arm or hand.",
+      "common_contributors": [
+        "Cervical disc or joint irritation",
+        "Forward-head posture",
+        "Sleeping position",
+        "Long desk or phone sessions"
+      ],
+      "linked_structures": [
+        "brachial_{s}",
+        "neckext_{s}",
+        "trap_{s}"
+      ],
+      "red_flag_ids": [
+        "new_neuro_deficit",
+        "cardiac"
+      ],
       "specialist": "Physical therapist or spine doctor",
-      "sources": ["cervical_radiculopathy"]
+      "sources": [
+        "cervical_radiculopathy"
+      ]
     },
     {
       "id": "trap_neck_to_head",
       "name": "Upper trapezius / neck → head (tension-type headache)",
-      "from_regions": ["trapezius_upper_l", "trapezius_upper_r", "neck_post_l", "neck_post_r", "neck_lat_l", "neck_lat_r"],
-      "to_regions": ["occiput_l", "occiput_r", "temple_l", "temple_r", "forehead", "crown", "face_l", "face_r"],
+      "short_name": "Neck and shoulders → headache",
+      "from_regions": [
+        "trapezius_upper_l",
+        "trapezius_upper_r",
+        "neck_post_l",
+        "neck_post_r",
+        "neck_lat_l",
+        "neck_lat_r"
+      ],
+      "to_regions": [
+        "occiput_l",
+        "occiput_r",
+        "temple_l",
+        "temple_r",
+        "forehead",
+        "crown",
+        "face_l",
+        "face_r"
+      ],
       "bidirectional": false,
       "side_rule": "any_side",
       "mechanism": "referred",
       "plain_explanation": "Tight upper trapezius and neck muscles refer pain up the back of the head to the temple and behind the eye. This is one of the most common drivers of tension-type headaches.",
-      "common_contributors": ["Muscle tension from stress", "Forward-head posture", "Short or poor sleep", "Long screen sessions"],
-      "linked_structures": ["trap_{s}", "neckext_{s}", "occipital_{s}", "scm_{s}"],
-      "red_flag_ids": ["headache_emergency", "new_neuro_deficit"],
+      "simple_explanation": "Tight muscles across your neck and shoulders can pull on the back of your head and cause tension headaches.",
+      "common_contributors": [
+        "Muscle tension from stress",
+        "Forward-head posture",
+        "Short or poor sleep",
+        "Long screen sessions"
+      ],
+      "linked_structures": [
+        "trap_{s}",
+        "neckext_{s}",
+        "occipital_{s}",
+        "scm_{s}"
+      ],
+      "red_flag_ids": [
+        "headache_emergency",
+        "new_neuro_deficit"
+      ],
       "specialist": "GP or physical therapist",
-      "sources": ["tension_headache", "travell_simons"]
+      "sources": [
+        "tension_headache",
+        "travell_simons"
+      ]
     },
     {
       "id": "gallbladder_to_shoulder_blade",
       "name": "Gallbladder → right shoulder blade",
-      "from_regions": ["abd_upper_r", "epigastric"],
-      "to_regions": ["scapula_r", "shoulder_top_r", "mid_back_r"],
+      "short_name": "Gallbladder → right shoulder blade",
+      "from_regions": [
+        "abd_upper_r",
+        "epigastric"
+      ],
+      "to_regions": [
+        "scapula_r",
+        "shoulder_top_r",
+        "mid_back_r"
+      ],
       "bidirectional": false,
       "side_rule": "any_side",
       "mechanism": "visceral",
       "plain_explanation": "The gallbladder sits under the right ribs. Irritation there is often felt under the right shoulder blade, typically after a fatty meal.",
-      "common_contributors": ["Gallstones", "Large or fatty meals"],
+      "simple_explanation": "The gallbladder shares nerves with the right shoulder blade, so a gallbladder problem can be felt there.",
+      "common_contributors": [
+        "Gallstones",
+        "Large or fatty meals"
+      ],
       "linked_structures": [],
-      "red_flag_ids": ["abdominal_or_testicular", "back_pain_systemic"],
+      "red_flag_ids": [
+        "abdominal_or_testicular",
+        "back_pain_systemic"
+      ],
       "specialist": "GP; gastroenterologist",
-      "sources": ["visceral_referral"]
+      "sources": [
+        "visceral_referral"
+      ]
     },
     {
       "id": "diaphragm_to_shoulder_tip",
       "name": "Diaphragm → shoulder tip",
-      "from_regions": ["abd_upper_l", "abd_upper_r", "epigastric", "ribs_lat_l", "ribs_lat_r"],
-      "to_regions": ["shoulder_top_l", "shoulder_top_r", "trapezius_upper_l", "trapezius_upper_r"],
+      "short_name": "Diaphragm → shoulder tip",
+      "from_regions": [
+        "abd_upper_l",
+        "abd_upper_r",
+        "epigastric",
+        "ribs_lat_l",
+        "ribs_lat_r"
+      ],
+      "to_regions": [
+        "shoulder_top_l",
+        "shoulder_top_r",
+        "trapezius_upper_l",
+        "trapezius_upper_r"
+      ],
       "bidirectional": false,
       "side_rule": "same_side",
       "mechanism": "visceral",
       "plain_explanation": "The diaphragm is supplied by the phrenic nerve, which comes from the same neck roots (C3–C5) as the skin over the shoulder tip, so irritation under the diaphragm is often felt at the top of the shoulder.",
-      "common_contributors": ["Irritation below the diaphragm (e.g. gallbladder, spleen)", "Recent abdominal surgery or laparoscopy"],
+      "simple_explanation": "The muscle under your lungs shares a nerve with the shoulder tip, so problems there can be felt in the shoulder.",
+      "common_contributors": [
+        "Irritation below the diaphragm (e.g. gallbladder, spleen)",
+        "Recent abdominal surgery or laparoscopy"
+      ],
       "linked_structures": [],
-      "red_flag_ids": ["abdominal_or_testicular", "cardiac"],
+      "red_flag_ids": [
+        "abdominal_or_testicular",
+        "cardiac"
+      ],
       "specialist": "GP / urgent care",
-      "sources": ["visceral_referral"]
+      "sources": [
+        "visceral_referral"
+      ]
     },
     {
       "id": "cardiac_referral",
       "name": "Heart → left arm, jaw, neck, back",
-      "from_regions": ["chest_l", "chest_r", "sternum", "epigastric"],
-      "to_regions": ["upper_arm_ant_l", "upper_arm_post_l", "forearm_ant_l", "hand_l", "upper_arm_ant_r", "jaw_l", "jaw_r", "chin", "throat", "neck_ant_l", "neck_ant_r", "upper_back_l", "upper_back_r", "scapula_l", "scapula_r", "shoulder_top_l"],
+      "short_name": "Heart → arm, jaw, neck, back",
+      "from_regions": [
+        "chest_l",
+        "chest_r",
+        "sternum",
+        "epigastric"
+      ],
+      "to_regions": [
+        "upper_arm_ant_l",
+        "upper_arm_post_l",
+        "forearm_ant_l",
+        "hand_l",
+        "upper_arm_ant_r",
+        "jaw_l",
+        "jaw_r",
+        "chin",
+        "throat",
+        "neck_ant_l",
+        "neck_ant_r",
+        "upper_back_l",
+        "upper_back_r",
+        "scapula_l",
+        "scapula_r",
+        "shoulder_top_l"
+      ],
       "bidirectional": true,
       "side_rule": "any_side",
       "mechanism": "visceral",
       "plain_explanation": "Heart pain is often felt in the chest and can spread to the left arm, jaw, neck or upper back. This pattern always needs urgent medical assessment.",
-      "common_contributors": ["Reduced blood flow to the heart"],
+      "simple_explanation": "Heart problems can be felt in the left arm, jaw, neck or back. Chest pain with these needs urgent care.",
+      "common_contributors": [
+        "Reduced blood flow to the heart"
+      ],
       "linked_structures": [],
-      "red_flag_ids": ["cardiac"],
+      "red_flag_ids": [
+        "cardiac"
+      ],
       "always_red_flag": true,
       "specialist": "Emergency services",
-      "sources": ["acs"]
+      "sources": [
+        "acs"
+      ]
     },
     {
       "id": "plantar_calf",
       "name": "Foot arch / heel ↔ calf",
-      "from_regions": ["plantar_foot_l", "plantar_foot_r", "heel_l", "heel_r"],
-      "to_regions": ["calf_l", "calf_r", "achilles_l", "achilles_r"],
+      "short_name": "Foot arch ↔ calf",
+      "from_regions": [
+        "plantar_foot_l",
+        "plantar_foot_r",
+        "heel_l",
+        "heel_r"
+      ],
+      "to_regions": [
+        "calf_l",
+        "calf_r",
+        "achilles_l",
+        "achilles_r"
+      ],
       "bidirectional": true,
       "side_rule": "same_side",
       "mechanism": "muscle_chain",
       "plain_explanation": "The calf muscles, Achilles tendon and plantar fascia work as one continuous chain. Tight calves load the heel and arch, and foot pain changes how the calf works.",
-      "common_contributors": ["Tight calves", "Sudden increase in running or standing", "Unsupportive footwear", "Weight change"],
-      "linked_structures": ["calf_{s}", "achilles_{s}", "plantar_{s}"],
-      "red_flag_ids": ["dvt", "trauma"],
+      "simple_explanation": "Your calf, heel cord and foot arch work as one chain, so tightness in one often pulls on the others.",
+      "common_contributors": [
+        "Tight calves",
+        "Sudden increase in running or standing",
+        "Unsupportive footwear",
+        "Weight change"
+      ],
+      "linked_structures": [
+        "calf_{s}",
+        "achilles_{s}",
+        "plantar_{s}"
+      ],
+      "red_flag_ids": [
+        "dvt",
+        "trauma"
+      ],
       "specialist": "Physical therapist or podiatrist",
-      "sources": ["plantar_heel"]
+      "sources": [
+        "plantar_heel"
+      ]
     },
     {
       "id": "hip_weakness_to_knee",
       "name": "Hip / glute weakness → knee",
-      "from_regions": ["hip_lat_l", "hip_lat_r", "buttock_l", "buttock_r", "thigh_lat_l", "thigh_lat_r"],
-      "to_regions": ["knee_ant_l", "knee_ant_r", "knee_lat_l", "knee_lat_r", "knee_med_l", "knee_med_r"],
+      "short_name": "Weak hips → knee",
+      "from_regions": [
+        "hip_lat_l",
+        "hip_lat_r",
+        "buttock_l",
+        "buttock_r",
+        "thigh_lat_l",
+        "thigh_lat_r"
+      ],
+      "to_regions": [
+        "knee_ant_l",
+        "knee_ant_r",
+        "knee_lat_l",
+        "knee_lat_r",
+        "knee_med_l",
+        "knee_med_r"
+      ],
       "bidirectional": false,
       "side_rule": "same_side",
       "mechanism": "muscle_chain",
       "plain_explanation": "When the glutes don't control the hip well, the thigh rotates inward and the knee takes extra load, commonly felt at the front or outside of the knee.",
-      "common_contributors": ["Weak or underused glutes", "Running volume increase", "IT band tightness"],
-      "linked_structures": ["glute_{s}", "itb_{s}", "patella_{s}", "pattend_{s}"],
-      "red_flag_ids": ["trauma"],
+      "simple_explanation": "Weak hip and buttock muscles let the knee drift inwards when you move, which can strain the knee.",
+      "common_contributors": [
+        "Weak or underused glutes",
+        "Running volume increase",
+        "IT band tightness"
+      ],
+      "linked_structures": [
+        "glute_{s}",
+        "itb_{s}",
+        "patella_{s}",
+        "pattend_{s}"
+      ],
+      "red_flag_ids": [
+        "trauma"
+      ],
       "specialist": "Physical therapist",
-      "sources": ["hip_knee"]
+      "sources": [
+        "hip_knee"
+      ]
     },
     {
       "id": "forward_head_posture",
       "name": "Forward-head posture → neck, upper back, jaw, headache",
-      "from_regions": ["neck_post_l", "neck_post_r", "upper_back_l", "upper_back_r"],
-      "to_regions": ["trapezius_upper_l", "trapezius_upper_r", "upper_back_l", "upper_back_r", "jaw_l", "jaw_r", "tmj_l", "tmj_r", "occiput_l", "occiput_r", "forehead", "temple_l", "temple_r"],
+      "short_name": "Head posture → neck, back, jaw",
+      "from_regions": [
+        "neck_post_l",
+        "neck_post_r",
+        "upper_back_l",
+        "upper_back_r"
+      ],
+      "to_regions": [
+        "trapezius_upper_l",
+        "trapezius_upper_r",
+        "upper_back_l",
+        "upper_back_r",
+        "jaw_l",
+        "jaw_r",
+        "tmj_l",
+        "tmj_r",
+        "occiput_l",
+        "occiput_r",
+        "forehead",
+        "temple_l",
+        "temple_r"
+      ],
       "bidirectional": false,
       "side_rule": "any_side",
       "mechanism": "postural",
       "plain_explanation": "When the head sits forward of the shoulders, the neck and upper-back muscles hold far more load, and the jaw position shifts. This often shows up as neck, upper-back and jaw pain plus headaches.",
-      "common_contributors": ["Long screen or phone time", "Desk setup", "Fatigue"],
-      "linked_structures": ["neckext_{s}", "trap_{s}", "scm_{s}", "masseter_{s}", "occipital_{s}"],
-      "red_flag_ids": ["headache_emergency"],
+      "simple_explanation": "Holding your head forward strains your neck, upper back and jaw, and can lead to headaches.",
+      "common_contributors": [
+        "Long screen or phone time",
+        "Desk setup",
+        "Fatigue"
+      ],
+      "linked_structures": [
+        "neckext_{s}",
+        "trap_{s}",
+        "scm_{s}",
+        "masseter_{s}",
+        "occipital_{s}"
+      ],
+      "red_flag_ids": [
+        "headache_emergency"
+      ],
       "specialist": "Physical therapist",
-      "sources": ["forward_head"]
+      "sources": [
+        "forward_head"
+      ]
     }
   ]
 }

@@ -102,7 +102,11 @@ struct BodyScreen: View {
     /// One-line summary shown when the sheet is collapsed, in plain language.
     private var panelSummary: (title: String, action: String?) {
         if let s = model.selection { return (s.region.map { "\(s.structureName) · \($0.name)" } ?? s.structureName, nil) }
-        if let r = model.selectedSpot { return ("\(model.regionName(r)) · your history here", nil) }
+        if let r = model.selectedSpot {
+            let others = model.spotConnections.map { model.regionName($0.otherRegionID) }
+            if others.isEmpty { return (model.regionName(r), "Details") }
+            return ("\(model.regionName(r)) → \(others.joined(separator: ", "))", "Details")
+        }
         if let e = model.selectedEpisode { return ("\(e.title) · why they may be connected", nil) }
         let episodes = model.episodes
         if let ep = episodes.first, episodes.count == 1 {
@@ -245,7 +249,7 @@ struct BodyScreen: View {
         }
         .onChange(of: panelExpanded) { _, open in
             // Closing the drawer lets go of the selection, so nothing stays highlighted.
-            if !open, model.selection != nil || model.selectedSpot != nil || model.selectedEpisode != nil {
+            if !open, model.selection != nil || model.selectedEpisode != nil {
                 model.clearSelection()
             }
         }
@@ -256,8 +260,10 @@ struct BodyScreen: View {
         }
         .onChange(of: panelFocus) { _, focus in
             withAnimation(.spring(response: 0.4, dampingFraction: 0.88)) {
-                panelExpanded = !focus.isEmpty
-                if focus.isEmpty { panelFull = false }
+                // A tapped pain stays small so the body (and its connections) stays in view;
+                // "Details" opens it. Other selections open the drawer.
+                panelExpanded = !focus.isEmpty && !focus.hasPrefix("r:")
+                if focus.isEmpty || focus.hasPrefix("r:") { panelFull = false }
             }
         }
     }

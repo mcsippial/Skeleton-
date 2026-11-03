@@ -15,6 +15,10 @@ public struct PainPathway: Codable, Sendable, Identifiable {
     public let sideRule: SideRule
     public let mechanism: Mechanism
     public let plainExplanation: String
+    /// Short everyday name ("Lower back → groin") and a one-sentence explanation with no
+    /// medical terms, for the app. `name` / `plainExplanation` stay the reference versions.
+    public let shortName: String?
+    public let simpleExplanation: String?
     public let commonContributors: [String]
     /// Stock-anatomy structure IDs; "{s}" is replaced by the matched side suffix.
     public let linkedStructures: [String]
@@ -27,6 +31,7 @@ public struct PainPathway: Codable, Sendable, Identifiable {
         case id, name, bidirectional, mechanism, specialist, sources
         case fromRegions = "from_regions", toRegions = "to_regions", sideRule = "side_rule"
         case plainExplanation = "plain_explanation", commonContributors = "common_contributors"
+        case shortName = "short_name", simpleExplanation = "simple_explanation"
         case linkedStructures = "linked_structures", redFlagIDs = "red_flag_ids", alwaysRedFlag = "always_red_flag"
     }
 
@@ -40,6 +45,8 @@ public struct PainPathway: Codable, Sendable, Identifiable {
         sideRule = try c.decode(SideRule.self, forKey: .sideRule)
         mechanism = try c.decode(Mechanism.self, forKey: .mechanism)
         plainExplanation = try c.decode(String.self, forKey: .plainExplanation)
+        shortName = try c.decodeIfPresent(String.self, forKey: .shortName)
+        simpleExplanation = try c.decodeIfPresent(String.self, forKey: .simpleExplanation)
         commonContributors = try c.decode([String].self, forKey: .commonContributors)
         linkedStructures = try c.decode([String].self, forKey: .linkedStructures)
         redFlagIDs = try c.decode([String].self, forKey: .redFlagIDs)
@@ -47,6 +54,10 @@ public struct PainPathway: Codable, Sendable, Identifiable {
         specialist = try c.decode(String.self, forKey: .specialist)
         sources = try c.decode([String].self, forKey: .sources)
     }
+
+    /// What the app shows: the everyday versions when present.
+    public var displayName: String { shortName ?? name }
+    public var displayExplanation: String { simpleExplanation ?? plainExplanation }
 
     /// Linked structure IDs resolved for a side (both sides for the centre line).
     public func structures(for side: BodySide) -> [String] {

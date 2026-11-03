@@ -22,3 +22,16 @@ final class BodyOverviewTests: XCTestCase {
         XCTAssertTrue(o.hubs.isEmpty)
     }
 }
+
+final class PlainNamesTests: XCTestCase {
+    func testEveryLinkedStructureHasAnEverydayName() {
+        for p in Fixtures.data.pathways.pathways {
+            XCTAssertNotNil(p.simpleExplanation, p.id)
+            XCTAssertNotNil(p.shortName, p.id)
+            for id in p.structures(for: .left) {
+                XCTAssertNotNil(PlainNames.structure(id), "\(p.id): \(id)")
+            }
+        }
+        XCTAssertEqual(PlainNames.structure("femoral_l"), "Left thigh nerve")
+    }
+}

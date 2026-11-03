@@ -122,6 +122,34 @@ public struct StockBody: Sendable {
         }
     }
 
+    /// A path from one point to another that runs over the body's surface (not through the air),
+    /// lifted slightly off the skin: the trail drawn between connected pains.
+    public func surfaceTrail(from a: Vec3, to b: Vec3, samples: Int = 28, lift: Float = 0.012) -> [Vec3] {
+        guard samples > 1 else { return [a, b] }
+        var pts: [Vec3] = []
+        for i in 0...samples {
+            let t = Float(i) / Float(samples)
+            let p = a + (b - a) * t
+            // Snap to the nearest skin and push out along its normal.
+            if let tri = centroidGrid.nearest(to: p, maxDistance: 0.35), tri * 3 + 2 < skinMesh.indices.count {
+                let i0 = Int(skinMesh.indices[tri * 3]), i1 = Int(skinMesh.indices[tri * 3 + 1]), i2 = Int(skinMesh.indices[tri * 3 + 2])
+                let n: Vec3 = (skinMesh.normals[i0] + skinMesh.normals[i1] + skinMesh.normals[i2]).unit
+                pts.append(skinCentroids[tri] + n * lift)
+            } else {
+                pts.append(p)
+            }
+        }
+        // Smooth out the steps between triangles; keep the ends on the pains.
+        for _ in 0..<4 {
+            var next = pts
+            for i in 1..<(pts.count - 1) { next[i] = (pts[i - 1] + pts[i] * 2 + pts[i + 1]) / 4 }
+            pts = next
+        }
+        pts[0] = a
+        pts[pts.count - 1] = b
+        return pts
+    }
+
     /// Exactly the skin of one region, lifted slightly off the surface, for filling a pain area.
     public func regionPatch(_ id: String, lift: Float = 0.002) -> MeshData? {
         var out = MeshData()
