@@ -22,6 +22,7 @@ struct HomeView: View {
                 }
                 actions
                 BodyPreviewCard(model: model)
+                if !model.entries.isEmpty { overviewCard }
                 if let latest = model.latestEntry {
                     latestCard(latest)
                 } else {
@@ -119,6 +120,29 @@ struct HomeView: View {
                 .glass(Circle(), tint: 0.55)
         }
         .accessibilityLabel("Account")
+    }
+
+    /// Way into the full body overview (the pain network).
+    private var overviewCard: some View {
+        let o = BodyOverview.build(entries: model.entries, data: model.data, metrics: model.metrics)
+        return Button { model.show(.overview) } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "point.3.connected.trianglepath.dotted")
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 40, height: 40)
+                    .background(Circle().fill(Color.white))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Your body overview").font(.system(size: 15, weight: .semibold))
+                    Text(o.summary).font(Theme.Font.caption).foregroundStyle(Theme.Color.secondaryText)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Theme.Color.secondaryText)
+            }
+            .padding(14)
+            .glass(RoundedRectangle(cornerRadius: 22, style: .continuous), tint: 0.6)
+        }
+        .buttonStyle(.plain)
     }
 
     private var actions: some View {

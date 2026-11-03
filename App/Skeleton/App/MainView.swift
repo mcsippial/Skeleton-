@@ -8,6 +8,7 @@ enum Route: Hashable {
     case pain(UUID)
     case pattern(String)
     case devices
+    case overview
 }
 
 /// Signed-in app: Home, Body and History tabs, each with its own navigation stack.
@@ -111,6 +112,7 @@ struct MainView: View {
         case .pain(let id): PainInsightPage(model: model, entryID: id)
         case .pattern(let id): PatternPage(model: model, episodeID: id)
         case .devices: DevicesView(model: model, profile: profile)
+        case .overview: OverviewPage(model: model)
         }
     }
 }

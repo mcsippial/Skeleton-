@@ -65,6 +65,12 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [ ] Pick Terra or Junction and implement `WearableConnector` (connect widget, webhook Edge Function)
 - [ ] Sync daily metrics to `health_metrics` and record the connection in `integrations`
 
+## Features (Nov 2026)
+- [x] Body overview: current pains as a network (pains ↔ shared pathways), what it may mean, health patterns, one combined plan (`BodyOverview`, rules only)
+- [ ] Trends & charts per pain area, with health metrics aligned
+- [ ] Stretch library with a 3D figure demonstrating each stretch
+- [ ] Ask Skeleton: chat grounded in your history (Edge Function, same safety rules)
+
 ## Phase 4 — The real body
 - [ ] in3D scan → GLB upload → USDZ conversion → rig check → atlas fit → set current model (Meshy fallback; optional Bodygram)
 - [ ] Fit layered anatomy to the scanned rig's bone lengths
