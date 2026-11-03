@@ -125,6 +125,13 @@ def skin_from_surface_regions():
              and not re.search(r"\.(j|g|t)$", o.name) and not re.search(r"hair|eyelash", o.name, re.I)]
     if len(parts) < 20:
         return None
+    # Neutral body: leave out the genital surface; its opening is closed smoothly below.
+    genital = [o for o in parts if re.search(r"urogenital|penis|scrot|vulva|genital", o.name, re.I)]
+    genital_centre = None
+    if genital:
+        pts = [o.matrix_world @ Vector(c) for o in genital for c in o.bound_box]
+        genital_centre = sum(pts, Vector()) / len(pts)
+        parts = [o for o in parts if o not in genital]
     for o in parts:
         for m in o.modifiers:
             if m.type == "SOLIDIFY":
@@ -139,9 +146,34 @@ def skin_from_surface_regions():
     zs = [v.co for v in bm.verts]
     height = max(max(c[i] for c in zs) - min(c[i] for c in zs) for i in range(3))
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=height * 0.0003)
-    # Close eye openings and nostrils; leave anything large alone.
-    boundary = [e for e in bm.edges if e.is_boundary]
-    bmesh.ops.holes_fill(bm, edges=boundary, sides=80)
+    # Close eye openings and nostrils, and the opening left where the genital surface was.
+    # Anything else that's open is left alone.
+    loops = boundary_loops(bm)
+    to_fill = [l for l in loops if len(l) <= 80]
+    if genital_centre is not None and loops:
+        crotch = min(loops, key=lambda l: (sum((e.verts[0].co for e in l), Vector()) / len(l) - genital_centre).length)
+        if crotch not in to_fill:
+            to_fill.append(crotch)
+    # Each opening gets a cap that is filled in with extra points and relaxed into a smooth
+    # surface between its edges (a flat lid would show).
+    cap = bm.faces.layers.int.new("skeleton_cap")
+    for l in to_fill:
+        for f in bmesh.ops.holes_fill(bm, edges=l, sides=len(l) + 1)["faces"]:
+            f[cap] = 1
+    caps = [f for f in bm.faces if f[cap]]
+    if caps:
+        for f in bmesh.ops.poke(bm, faces=caps)["faces"]:
+            f[cap] = 1
+        for _ in range(1):
+            cap_faces = [f for f in bm.faces if f[cap]]
+            inner = [e for e in {e for f in cap_faces for e in f.edges}
+                     if len(e.link_faces) == 2 and all(g[cap] for g in e.link_faces)]
+            bmesh.ops.subdivide_edges(bm, edges=inner, cuts=1)
+            bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if f[cap]])
+        moving = [v for v in bm.verts if v.link_faces and all(f[cap] for f in v.link_faces)]
+        for _ in range(30):
+            bmesh.ops.smooth_vert(bm, verts=moving, factor=0.6, use_axis_x=True, use_axis_y=True, use_axis_z=True)
+    bm.faces.layers.int.remove(cap)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     mesh = bpy.data.meshes.new("SkinSurface")
     bm.to_mesh(mesh)
@@ -154,6 +186,25 @@ def skin_from_surface_regions():
     skin.modifiers.new("skin_smooth", "SUBSURF").levels = 1
     bake([skin])
     return skin
+
+
+def boundary_loops(bm):
+    """Open edges grouped into connected loops."""
+    edges = {e for e in bm.edges if e.is_boundary}
+    loops = []
+    while edges:
+        start = edges.pop()
+        loop, stack = [start], [start]
+        while stack:
+            e = stack.pop()
+            for v in e.verts:
+                for n in v.link_edges:
+                    if n in edges:
+                        edges.remove(n)
+                        loop.append(n)
+                        stack.append(n)
+        loops.append(loop)
+    return loops
 
 
 def wrap_skin(objs):

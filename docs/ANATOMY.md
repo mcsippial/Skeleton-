@@ -60,6 +60,6 @@ Downloads [Z-Anatomy](https://github.com/Z-Anatomy/Models-of-human-anatomy) and 
 
 ## Skin
 
-The app uses the model's own skin when it has one, so the outside matches the muscles and bones exactly. Z-Anatomy keeps its skin as ~250 body-surface patches in the "Regions of human body" collection; the import merges them, closes the eye openings, smooths it one level and exports it as the `skin` layer. (A model with an object named "Skin" uses that; with neither, the import wraps a skin around the muscles and bones.)
+The app uses the model's own skin when it has one, so the outside matches the muscles and bones exactly. Z-Anatomy keeps its skin as ~250 body-surface patches in the "Regions of human body" collection; the import merges them, leaves out the genital surface (closed over smoothly, so the body is neutral), closes the eye openings, smooths it one level and exports it as the `skin` layer. (A model with an object named "Skin" uses that; with neither, the import wraps a skin around the muscles and bones.)
 
 The 120 pain areas are copied from the stock skin onto it (nearest triangle, then smoothed); any area the copy misses grows from its anchor. The same step will fit the areas onto a scanned body in Phase 4.
