@@ -67,6 +67,16 @@ struct SupabaseAuthService: AuthService {
 
     func restoreSession() async -> AppUser? {
         guard let session = try? await client.auth.session else { return nil }
+        // A saved session can outlive its account (e.g. the user was deleted in the dashboard):
+        // check with the server, and sign out if it no longer knows this user. Offline keeps the session.
+        do {
+            _ = try await client.auth.user()
+        } catch is URLError {
+            return AppUser(id: session.user.id, email: session.user.email)
+        } catch {
+            try? await client.auth.signOut()
+            return nil
+        }
         return AppUser(id: session.user.id, email: session.user.email)
     }
 
