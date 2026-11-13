@@ -31,7 +31,7 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [x] App icon (`tools/gen_icon.py`)
 - [ ] TestFlight build (steps in `docs/TESTFLIGHT.md`)
 - [ ] Verify on device: RealityView background is transparent over the glow; tune lighting / skin material; consider a ShaderGraph thin-film material for true iridescence
-- [ ] Swap prototype anatomy for Z-Anatomy USDZ layers (prototype only, CC BY-SA) or keep the procedural body until Phase 4
+- [x] Z-Anatomy imported for prototyping (CC BY-SA, not for the App Store): `tools/anatomy/get_z_anatomy.sh`, with its own body surface as the skin (neutral)
 
 ## Phase 2 — Real AI + real accounts
 - [x] Edge Functions for Claude: `parse-pain` (text → regions/type/intensity/onset) and `cause-engine` (episode insight), structured JSON output, schema + server-side safety checks, refusal fallback, mock when no key (`AI_PROVIDER`)
@@ -39,7 +39,7 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [x] Voice input (on-device Speech framework; audio never leaves the phone)
 - [x] Doctor report export (PDF: patient summary, red flags, front/back body maps with spots and pathway lines, episodes, full log; share/print)
 - [x] Supabase project `otintmfebdkxkrqgryut` (us-east-1): migrations applied, RLS verified, `parse-pain` + `cause-engine` deployed (mock AI until the key is set)
-- [ ] Add `ANTHROPIC_API_KEY` + `AI_PROVIDER=claude` as Edge Function secrets, then verify from the app in live mode
+- [x] `ANTHROPIC_API_KEY` + `AI_PROVIDER=claude` set as Edge Function secrets; verified from the app in live mode
 - [x] Shareable report link (private `reports` bucket, 7-day signed URL; live mode)
 - [x] Insights saved per episode (reused until the episode changes) + per-user daily AI limits (`AI_DAILY_LIMIT_PARSE` 60, `AI_DAILY_LIMIT_INSIGHT` 25)
 
@@ -54,7 +54,7 @@ Phase checklists from `CLAUDE.md` §10. Tick items as they land.
 - [x] Import pipeline: `tools/anatomy/prepare_anatomy.py` (Blender) + name→structure mapper (tested) + coverage report; app loads `Anatomy/anatomy.usdz` with fallback to prototype anatomy; auto orient/scale (`AnatomyFit`, tested)
 - [x] Segmented body map (every skin triangle → atlas region, `tools/gen_skin_regions.py`): Home preview and whole-area pain fills on the 3D body; works for scanned bodies via the atlas
 - [ ] Choose and buy an anatomy model (nerves + in-app license)
-- [ ] Run the import, check the coverage report, tune overrides and triangle budget
+- [x] Import run on Z-Anatomy (1,307 structures, 52/56 pathway structures); repeat with the bought model
 
 ## Phase 3 — Health integrations
 - [x] Apple Health directly (HealthKit, read-only): sleep, HRV, resting HR, steps, workouts, weight; demo data in demo mode
